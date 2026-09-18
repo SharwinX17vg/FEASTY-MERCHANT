@@ -1,4 +1,23 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FEASTY MERCHANT
+
+FEASTY MERCHANT is the merchant-facing Next.js application in the FEASTY ecosystem.
+This checkpoint establishes the project architecture without changing the existing
+page or adding product functionality.
+
+## Project folders
+
+- `app/` - Next.js App Router routes, layouts, and route-level files.
+- `components/` - Reusable UI components shared across routes.
+- `lib/` - Shared low-level libraries and application configuration.
+- `types/` - Shared TypeScript type definitions.
+- `services/` - Modules that will coordinate external or backend operations.
+- `hooks/` - Reusable React hooks for shared client-side behavior.
+- `utils/` - Small, reusable, domain-agnostic helper functions.
+- `public/` - Static assets served directly by Next.js.
+- `docs/` - Project documentation and architecture notes.
+
+See [docs/PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md) for the planned
+responsibilities and boundaries of each folder.
 
 ## Getting Started
 
