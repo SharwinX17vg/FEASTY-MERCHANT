@@ -76,11 +76,12 @@ Contains project-level documentation, decisions, and architecture notes. This
 folder should explain how the application is organized without becoming a
 second source of implementation code.
 
-## Boundaries for this checkpoint
+## Current boundaries
 
-- The existing Next.js App Router setup remains unchanged.
-- The current page and visual design remain unchanged.
-- No feature, authentication, backend integration, or API implementation is
-  introduced by this structure-only checkpoint.
+- The application uses the Next.js App Router with route-level `loading.tsx`,
+  `error.tsx`, `global-error.tsx`, and `not-found.tsx` boundaries.
+- The current routes are presentation and foundation surfaces; they do not
+  implement authenticated backend workflows.
+- No authentication, backend integration, or API implementation is connected.
 - Empty folders are intentionally left without placeholder files until they are
   needed by a real implementation.

@@ -17,8 +17,7 @@ type IconName =
   | "review"
   | "settings"
   | "shop"
-  | "star"
-  | "users";
+  | "star";
 
 const navigationItems: Array<{ label: string; icon: IconName }> = [
   { label: "Dashboard", icon: "dashboard" },
@@ -47,7 +46,6 @@ function NavigationIcon({ name }: { name: IconName }) {
     settings: "M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm0-12v2m0 13v2m9-8.5h-2m-14 0H3m15.4-6.4-1.4 1.4M7 16.9l-1.4 1.4m12.8 0-1.4-1.4M7 7.1 5.6 5.7",
     shop: "M4 10h16l-1 10H5L4 10Zm2-5h12l2 5H4l2-5Zm3 9v6m6-6v6",
     star: "m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z",
-    users: "M16 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1m6-9a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6-7a4 4 0 0 1 0 7.7M21 20v-1a4 4 0 0 0-3-3.9",
   };
 
   return (
@@ -75,6 +73,7 @@ export function Sidebar({
     <>
       <button
         aria-label="Close navigation"
+        aria-hidden={!mobileOpen}
         className={`fixed inset-0 z-30 bg-black/60 transition-opacity duration-300 lg:hidden ${
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
@@ -82,14 +81,15 @@ export function Sidebar({
         type="button"
       />
       <aside
+        aria-label="Merchant workspace navigation"
         className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-white/10 bg-[#111] px-4 py-5 transition-transform duration-300 ease-out lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex items-center justify-between px-3">
           <Link
-            className="flex items-center gap-2 text-base font-bold tracking-tight text-white"
-            href="#"
+            className="flex items-center gap-2 rounded-lg text-base font-bold tracking-tight text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+            href="/"
             onClick={onClose}
           >
             <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-sm text-primary-foreground">
@@ -99,7 +99,7 @@ export function Sidebar({
           </Link>
           <button
             aria-label="Close navigation"
-            className="rounded-lg p-2 text-muted transition hover:bg-white/10 hover:text-white lg:hidden"
+            className="rounded-lg p-2 text-muted transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-primary lg:hidden"
             onClick={onClose}
             type="button"
           >
@@ -116,12 +116,13 @@ export function Sidebar({
 
             return (
               <Link
-                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition duration-200 ${
+                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                   isActive
                     ? "bg-primary/15 font-semibold text-primary"
                     : "text-muted hover:bg-white/[0.06] hover:text-white"
                 }`}
-                href="#"
+                href={isActive ? "/dashboard" : "#"}
+                aria-current={isActive ? "page" : undefined}
                 key={item.label}
                 onClick={onClose}
               >

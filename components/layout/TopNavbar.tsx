@@ -1,4 +1,5 @@
 type TopNavbarProps = {
+  mobileOpen: boolean;
   onMenuClick: () => void;
 };
 
@@ -31,12 +32,13 @@ function Icon({
   );
 }
 
-export function TopNavbar({ onMenuClick }: TopNavbarProps) {
+export function TopNavbar({ mobileOpen, onMenuClick }: TopNavbarProps) {
   return (
     <header className="sticky top-0 z-20 flex h-[4.5rem] items-center justify-between border-b border-white/10 bg-background/85 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
       <button
         aria-label="Open navigation"
-        className="rounded-xl p-2 text-muted transition hover:bg-white/10 hover:text-white lg:hidden"
+        aria-expanded={mobileOpen}
+        className="rounded-xl p-2 text-muted transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-primary lg:hidden"
         onClick={onMenuClick}
         type="button"
       >

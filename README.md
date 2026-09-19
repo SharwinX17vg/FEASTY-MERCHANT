@@ -1,8 +1,9 @@
 # FEASTY MERCHANT
 
-FEASTY MERCHANT is the merchant-facing Next.js application in the FEASTY ecosystem.
-This checkpoint establishes the project architecture without changing the existing
-page or adding product functionality.
+FEASTY MERCHANT is the merchant-facing Next.js application in the FEASTY
+ecosystem. The current Day 1 foundation provides responsive UI routes, reusable
+layout and form primitives, route loading/error boundaries, and Supabase client
+scaffolding without connected authentication or backend workflows.
 
 ## Project folders
 
@@ -17,7 +18,9 @@ page or adding product functionality.
 - `docs/` - Project documentation and architecture notes.
 
 See [docs/PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md) for the planned
-responsibilities and boundaries of each folder.
+responsibilities and boundaries of each folder. See
+[docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) for the intentionally
+unconnected Supabase foundation.
 
 ## Getting Started
 
@@ -33,11 +36,25 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser to review
+the application. Current routes are `/`, `/login`, `/signup`,
+`/register/business-type`, and `/dashboard`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts)
+to automatically optimize and load [Geist](https://vercel.com/font).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Validation
+
+Run these commands from `feasty-merchant-app/`:
+
+```bash
+npm run lint
+npm run build
+```
+
+The project currently uses local form validation and static dashboard data.
+Supabase authentication, API calls, persistence, and production merchant
+workflows are not implemented yet.
 
 ## Learn More
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 import {
+  Card,
   Input,
   PrimaryButton,
   SecondaryButton,
@@ -132,7 +133,7 @@ export default function LoginPage() {
         </section>
 
         <section className="flex items-center justify-center px-6 py-10 sm:px-10 lg:px-16">
-          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.06] p-6 shadow-2xl shadow-black/20 backdrop-blur-2xl sm:p-9">
+          <Card className="w-full max-w-md p-6 shadow-2xl shadow-black/20 sm:p-9">
             <div className="mb-8">
               <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-accent">
                 Welcome back
@@ -210,7 +211,7 @@ export default function LoginPage() {
                 Create Business Account
               </Link>
             </p>
-          </div>
+          </Card>
         </section>
       </div>
     </main>

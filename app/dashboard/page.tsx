@@ -1,17 +1,18 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import {
   DashboardIcon,
+  type DashboardIconName,
   ProgressBar,
   StatCard,
 } from "@/components/dashboard/DashboardWidgets";
-import { Card, PrimaryButton, SecondaryButton } from "@/components/ui";
+import { Card, EmptyState, PrimaryButton, SecondaryButton } from "@/components/ui";
 
-const activities = [
+const activities: Array<[string, string, string, DashboardIconName]> = [
   ["Offer published", "Lunch special is now live on FEASTYMAP.", "10 min ago", "offer"],
   ["Business verification submitted", "Your documents are under review.", "2 hours ago", "check"],
   ["Menu updated", "You added 3 new menu items.", "Yesterday", "menu"],
   ["Event scheduled", "Friday evening event was added.", "Yesterday", "calendar"],
-] as const;
+];
 
 const notifications = [
   ["Verification reminder", "Complete your documents to get verified.", "Complete now", "clock"],
@@ -26,6 +27,14 @@ const checklist = [
   ["Opening Hours", false],
   ["Verification Documents", false],
 ] as const;
+
+const quickActions: Array<[string, DashboardIconName]> = [
+  ["Add Offer", "offer"],
+  ["Add Event", "calendar"],
+  ["Add Today's Special", "sparkle"],
+  ["Update Menu", "menu"],
+  ["Add Branch", "pin"],
+];
 
 export default function DashboardPage() {
   return (
@@ -66,14 +75,8 @@ export default function DashboardPage() {
           <section className="mt-8">
             <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Quick actions</h2><span className="text-xs text-muted">Keep your presence fresh</span></div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {[
-                ["Add Offer", "offer"],
-                ["Add Event", "calendar"],
-                ["Add Today&apos;s Special", "sparkle"],
-                ["Update Menu", "menu"],
-                ["Add Branch", "pin"],
-              ].map(([label, icon]) => (
-                <SecondaryButton className="justify-start" key={label}><DashboardIcon name={icon as "offer"} className="mr-3 size-4 text-primary" />{label}</SecondaryButton>
+              {quickActions.map(([label, icon]) => (
+                <SecondaryButton className="justify-start" key={label}><DashboardIcon name={icon} className="mr-3 size-4 text-primary" />{label}</SecondaryButton>
               ))}
             </div>
           </section>
@@ -82,7 +85,12 @@ export default function DashboardPage() {
             <Card className="p-5 sm:p-6">
               <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Recent activity</h2><button className="text-xs font-medium text-primary hover:text-accent" type="button">View all</button></div>
               <div className="mt-6 space-y-5">
-                {activities.map(([title, description, time, icon], index) => (
+                {activities.length === 0 ? (
+                  <EmptyState
+                    description="Published offers, menu updates, and events will appear here."
+                    title="No recent activity"
+                  />
+                ) : activities.map(([title, description, time, icon], index) => (
                   <div className="flex gap-4" key={title}>
                     <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/5 text-primary">{index < activities.length - 1 ? <span className="absolute left-1/2 top-9 h-8 w-px bg-white/10" /> : null}<DashboardIcon name={icon} className="size-4" /></div>
                     <div className="min-w-0"><p className="text-sm font-medium text-white">{title}</p><p className="mt-1 text-xs leading-5 text-muted">{description}</p><p className="mt-1 text-[11px] text-muted">{time}</p></div>

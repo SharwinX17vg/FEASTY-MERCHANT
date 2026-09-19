@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Sidebar } from "./Sidebar";
 import { TopNavbar } from "./TopNavbar";
@@ -16,6 +16,17 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMobileOpen(false);
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [mobileOpen]);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Sidebar
@@ -24,7 +35,10 @@ export function DashboardLayout({
         onClose={() => setMobileOpen(false)}
       />
       <div className="min-h-screen lg:pl-72">
-        <TopNavbar onMenuClick={() => setMobileOpen(true)} />
+        <TopNavbar
+          mobileOpen={mobileOpen}
+          onMenuClick={() => setMobileOpen(true)}
+        />
         <main>{children}</main>
       </div>
     </div>
