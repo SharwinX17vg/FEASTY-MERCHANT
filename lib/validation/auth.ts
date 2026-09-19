@@ -5,12 +5,19 @@ import {
   isPossiblePhoneNumber,
   isValidPhoneNumber,
   parsePhoneNumber,
+  parsePhoneNumberFromString,
   type CountryCode,
 } from "libphonenumber-js";
 
 export const supportedCountries = getCountries().map((country) => ({
   country,
   callingCode: `+${getCountryCallingCode(country)}`,
+  flag: country
+    .split("")
+    .map((letter) => String.fromCodePoint(letter.charCodeAt(0) + 127397))
+    .join(""),
+  name:
+    new Intl.DisplayNames(["en"], { type: "region" }).of(country) ?? country,
 }));
 
 export function normalizeEmail(value: unknown) {
@@ -29,6 +36,22 @@ export function validatePassword(value: unknown) {
 
 export function formatPhone(value: string, country: CountryCode) {
   return new AsYouType(country).input(value);
+}
+
+export function detectPhoneCountry(value: unknown) {
+  return parsePhoneNumberFromString(String(value ?? "").trim())?.country;
+}
+
+export function reformatPhone(
+  value: string,
+  fromCountry: CountryCode,
+  toCountry: CountryCode,
+) {
+  const parsed = parsePhoneNumberFromString(value, fromCountry);
+  const nationalNumber =
+    parsed?.country === fromCountry ? parsed.nationalNumber : value.replace(/\D/g, "");
+
+  return formatPhone(nationalNumber, toCountry);
 }
 
 export function normalizePhone(value: unknown, country: CountryCode) {

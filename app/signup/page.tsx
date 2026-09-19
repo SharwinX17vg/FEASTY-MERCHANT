@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import type { CountryCode } from "libphonenumber-js";
 
 import { Card, Input, PrimaryButton, SecondaryButton } from "@/components/ui";
 import {
+  detectPhoneCountry,
   formatPhone,
+  normalizePhone,
+  reformatPhone,
   supportedCountries,
   validatePassword,
 } from "@/lib/validation/auth";
@@ -62,8 +65,13 @@ export default function SignupPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [country, setCountry] = useState("IN");
+  const [phone, setPhone] = useState("");
+  const [countrySearch, setCountrySearch] = useState("");
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [highlightedCountry, setHighlightedCountry] = useState(0);
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const countrySearchRef = useRef<HTMLInputElement>(null);
 
   const passwordStrength = useMemo(() => {
     let score = 0;
@@ -83,11 +91,53 @@ export default function SignupPage() {
           ? "Good password"
           : "Strong password";
 
+  const filteredCountries = useMemo(() => {
+    const query = countrySearch.trim().toLowerCase();
+    if (!query) return supportedCountries;
+
+    return supportedCountries.filter(({ country: code, callingCode, name }) =>
+      `${name} ${code} ${callingCode}`.toLowerCase().includes(query),
+    );
+  }, [countrySearch]);
+  const selectedCountry = supportedCountries.find(({ country: code }) => code === country) ?? supportedCountries[0];
+
+  function selectCountry(nextCountry: string) {
+    setPhone((currentPhone) =>
+      reformatPhone(currentPhone, country as CountryCode, nextCountry as CountryCode),
+    );
+    setCountry(nextCountry);
+    setCountrySearch("");
+    setCountryOpen(false);
+  }
+
+  function handlePhoneChange(value: string) {
+    const detectedCountry = value.trim().startsWith("+")
+      ? detectPhoneCountry(value)
+      : undefined;
+
+    if (detectedCountry) {
+      setCountry(detectedCountry);
+      const parsedNumber = value.replace(/[^\d+]/g, "");
+      setPhone(formatPhone(parsedNumber, detectedCountry));
+      return;
+    }
+
+    setPhone(formatPhone(value, country as CountryCode));
+  }
+
+  function handlePhonePaste(event: React.ClipboardEvent<HTMLInputElement>) {
+    const pastedValue = event.clipboardData.getData("text");
+    if (!pastedValue.trim().startsWith("+")) return;
+
+    event.preventDefault();
+    handlePhoneChange(pastedValue);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
-    const phone = String(formData.get("phone") ?? "").trim();
+    const phoneResult = normalizePhone(phone, country as CountryCode);
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
     const nextErrors: FormErrors = {};
 
@@ -99,7 +149,7 @@ export default function SignupPage() {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       nextErrors.email = "Enter a valid email address.";
     }
-    if (!phone) nextErrors.phone = "Phone number is required.";
+    if ("error" in phoneResult) nextErrors.phone = phoneResult.error;
     if (!password) {
       nextErrors.password = "Password is required.";
     } else if (validatePassword(password)) {
@@ -124,7 +174,7 @@ export default function SignupPage() {
           name: formData.get("name"),
           email,
           country,
-          phone,
+          phone: "e164" in phoneResult ? phoneResult.e164 : phone,
           password,
           confirmPassword,
           termsAccepted,
@@ -244,36 +294,107 @@ export default function SignupPage() {
                 placeholder="you@yourbusiness.com"
                 type="email"
               />
-              <label className="block space-y-2" htmlFor="country">
-                <span className="block text-sm font-medium text-foreground">Country</span>
-                <select
-                  className="min-h-11 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  id="country"
-                  name="country"
-                  onChange={(event) => setCountry(event.target.value)}
-                  value={country}
-                >
-                  {supportedCountries.map(({ country: code, callingCode }) => (
-                    <option className="bg-[#141414]" key={code} value={code}>
-                      {code} {callingCode}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Input
-                autoComplete="tel"
-                error={errors.phone}
-                label="Phone Number"
-                name="phone"
-                onChange={(event) => {
-                  event.target.value = formatPhone(
-                    event.target.value,
-                    country as CountryCode,
-                  );
-                }}
-                placeholder="+1 555 000 0000"
-                type="tel"
-              />
+              <div className="space-y-2">
+                <span className="block text-sm font-medium text-foreground">Phone Number</span>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <div className="relative sm:w-56">
+                    <input name="country" type="hidden" value={country} />
+                    <button
+                      aria-expanded={countryOpen}
+                      aria-haspopup="listbox"
+                      className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/5 px-3 text-left text-sm text-foreground outline-none transition hover:border-white/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
+                      onClick={() => {
+                        setCountryOpen((open) => !open);
+                        setTimeout(() => countrySearchRef.current?.focus(), 0);
+                      }}
+                      type="button"
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span aria-hidden="true" className="text-lg">{selectedCountry.flag}</span>
+                        <span className="truncate">{selectedCountry.name}</span>
+                      </span>
+                      <span className="text-muted">⌄</span>
+                    </button>
+                    {countryOpen ? (
+                      <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl border border-white/15 bg-[#171717] shadow-2xl shadow-black/40">
+                        <div className="border-b border-white/10 p-2">
+                          <label className="sr-only" htmlFor="country-search">Search countries</label>
+                          <input
+                            aria-controls="country-options"
+                            aria-expanded={countryOpen}
+                            aria-label="Search countries"
+                            className="min-h-10 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            id="country-search"
+                            onChange={(event) => {
+                              setCountrySearch(event.target.value);
+                              setHighlightedCountry(0);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "ArrowDown") {
+                                event.preventDefault();
+                                setHighlightedCountry((index) => Math.min(index + 1, filteredCountries.length - 1));
+                              } else if (event.key === "ArrowUp") {
+                                event.preventDefault();
+                                setHighlightedCountry((index) => Math.max(index - 1, 0));
+                              } else if (event.key === "Enter") {
+                                event.preventDefault();
+                                const option = filteredCountries[highlightedCountry];
+                                if (option) selectCountry(option.country);
+                              } else if (event.key === "Escape") {
+                                setCountryOpen(false);
+                              }
+                            }}
+                            ref={countrySearchRef}
+                            role="combobox"
+                            value={countrySearch}
+                          />
+                        </div>
+                        <div
+                          aria-label="Countries"
+                          className="max-h-56 overflow-y-auto p-1"
+                          id="country-options"
+                          role="listbox"
+                        >
+                          {filteredCountries.map((option, index) => (
+                            <button
+                              aria-selected={option.country === country}
+                              className={`flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left text-sm text-white transition hover:bg-white/10 focus-visible:bg-white/10 focus-visible:outline-none ${
+                                index === highlightedCountry ? "bg-white/10" : ""
+                              }`}
+                              key={option.country}
+                              onClick={() => selectCountry(option.country)}
+                              role="option"
+                              type="button"
+                            >
+                              <span aria-hidden="true" className="text-lg">{option.flag}</span>
+                              <span className="min-w-0 flex-1 truncate">{option.name}</span>
+                              <span className="text-xs text-muted">{option.country}</span>
+                              <span className="text-xs text-accent">{option.callingCode}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="flex min-h-11 flex-1 items-center rounded-xl border border-white/15 bg-white/5 px-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                    <span aria-hidden="true" className="border-r border-white/10 pr-3 text-sm font-medium text-accent">{selectedCountry.callingCode}</span>
+                    <Input
+                      aria-describedby={errors.phone ? "phone-error" : undefined}
+                      aria-label="National phone number"
+                      autoComplete="tel"
+                      className="min-h-10 border-0 bg-transparent px-3 py-0 focus:border-0 focus:ring-0"
+                      error={errors.phone}
+                      name="phone"
+                      onChange={(event) => handlePhoneChange(event.target.value)}
+                      onPaste={handlePhonePaste}
+                      placeholder="98765 43210"
+                      type="tel"
+                      value={phone}
+                    />
+                  </div>
+                </div>
+                {errors.phone ? <p className="text-xs text-red-300" id="phone-error">{errors.phone}</p> : null}
+              </div>
 
               <div className="relative">
                 <Input

@@ -3,8 +3,10 @@ import test from "node:test";
 
 import { getSafeNextPath } from "../lib/auth/redirect.ts";
 import {
+  detectPhoneCountry,
   normalizeEmail,
   normalizePhone,
+  reformatPhone,
   validatePassword,
   validateSignupInput,
 } from "../lib/validation/auth.ts";
@@ -38,6 +40,14 @@ test("normalizes a valid Indian phone number to E.164", () => {
   assert.deepEqual(normalizePhone("9876543210", "IN"), { e164: "+919876543210" });
 });
 
+test("accepts an Indian number pasted with the +91 country code", () => {
+  assert.deepEqual(normalizePhone("+919876543210", "IN"), { e164: "+919876543210" });
+});
+
+test("accepts an Indian national number without the country code", () => {
+  assert.deepEqual(normalizePhone("9876543210", "IN"), { e164: "+919876543210" });
+});
+
 test("rejects an invalid Indian phone number", () => {
   assert.deepEqual(normalizePhone("12345", "IN"), {
     error: "Enter a valid phone number for the selected country.",
@@ -52,6 +62,15 @@ test("rejects a phone number that does not match the selected country", () => {
 
 test("normalizes an international phone number to E.164", () => {
   assert.deepEqual(normalizePhone("+14155552671", "US"), { e164: "+14155552671" });
+});
+
+test("reformats the entered national number when the country changes", () => {
+  assert.equal(reformatPhone("98765 43210", "IN", "US"), "(987) 654-3210");
+});
+
+test("detects the country from an international paste", () => {
+  assert.equal(detectPhoneCountry("+919876543210"), "IN");
+  assert.equal(detectPhoneCountry("9876543210"), undefined);
 });
 
 const validSignupInput = {
