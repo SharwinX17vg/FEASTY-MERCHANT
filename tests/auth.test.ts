@@ -18,6 +18,12 @@ import {
   validatePassword,
   validateSignupInput,
 } from "../lib/validation/auth.ts";
+import {
+  createVerificationStoragePath,
+  isSafeVerificationStoragePath,
+  MAX_VERIFICATION_FILE_SIZE,
+  validateVerificationDocument,
+} from "../lib/verification/storage.ts";
 
 test("email normalization trims whitespace and lowercases addresses", () => {
   assert.equal(normalizeEmail("  Merchant@Example.COM "), "merchant@example.com");
@@ -193,4 +199,52 @@ test("signup validation accepts valid input without errors", () => {
   assert.equal(result.email, "asha@example.com");
   assert.equal(result.name, "Asha Merchant");
   assert.equal(result.country, "IN");
+});
+
+test("verification storage accepts matching PDF metadata and signature", () => {
+  const result = validateVerificationDocument(
+    "business-proof.pdf",
+    "application/pdf",
+    5,
+    new TextEncoder().encode("%PDF-1.7"),
+  );
+  assert.deepEqual(result, { valid: true, extension: "pdf", mimeType: "application/pdf" });
+});
+
+test("verification storage rejects unsupported types and mismatched signatures", () => {
+  assert.equal(validateVerificationDocument("script.js", "application/javascript", 5).valid, false);
+  assert.equal(
+    validateVerificationDocument("proof.pdf", "application/pdf", 5, new TextEncoder().encode("<html>")).valid,
+    false,
+  );
+});
+
+test("verification storage rejects oversized files", () => {
+  const result = validateVerificationDocument(
+    "proof.png",
+    "image/png",
+    MAX_VERIFICATION_FILE_SIZE + 1,
+  );
+  assert.deepEqual(result, { valid: false, error: "Verification documents must be smaller than 10 MB." });
+});
+
+test("verification storage rejects unsafe filenames and paths", () => {
+  assert.equal(validateVerificationDocument("../proof.pdf", "application/pdf", 5).valid, false);
+  assert.equal(isSafeVerificationStoragePath("../proof.pdf"), false);
+  assert.equal(isSafeVerificationStoragePath("org/business/request/object.pdf"), false);
+});
+
+test("verification storage paths use generated IDs and a safe extension", () => {
+  const path = createVerificationStoragePath(
+    "11111111-1111-4111-8111-111111111111",
+    "22222222-2222-4222-8222-222222222222",
+    "33333333-3333-4333-8333-333333333333",
+    "44444444-4444-4444-8444-444444444444",
+    "webp",
+  );
+  assert.equal(
+    path,
+    "11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222/33333333-3333-4333-8333-333333333333/44444444-4444-4444-8444-444444444444.webp",
+  );
+  assert.equal(isSafeVerificationStoragePath(path), true);
 });

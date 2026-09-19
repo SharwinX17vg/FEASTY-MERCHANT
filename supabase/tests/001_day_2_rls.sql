@@ -1,6 +1,6 @@
 begin;
 
-select plan(24);
+select plan(28);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'organizations', 'organizations table exists');
@@ -26,6 +26,10 @@ select has_policy('public', 'verification_requests', 'verification_requests_inse
 select has_policy('public', 'verification_requests', 'verification_requests_update_platform_reviewer', 'verification decisions are platform-scoped');
 select has_policy('public', 'audit_logs', 'audit_logs_insert_member', 'audit logs are insert-only for actors');
 select has_function('public', 'prevent_verification_decision_changes', ARRAY[]::text[], 'verification decisions have a database guard');
+select has_function('public', 'can_upload_verification_object', ARRAY['text']::text[], 'verification storage paths are authorized');
+select has_index('public', 'verification_documents', 'verification_documents_request_id_idx', 'documents are indexed by request');
+select ok((select public from storage.buckets where id = 'verification-documents') = false, 'verification bucket is private');
+select ok((select file_size_limit from storage.buckets where id = 'verification-documents') = 10485760, 'verification bucket is capped at 10 MB');
 
 select * from finish();
 rollback;

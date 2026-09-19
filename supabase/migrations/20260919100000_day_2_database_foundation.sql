@@ -462,17 +462,22 @@ stable
 security definer set search_path = public
 as $$
 declare
+  path_parts text[];
   request_id uuid;
 begin
-  if object_name !~ '^[0-9a-fA-F-]{36}/.+$' then
+  if object_name !~ '^[0-9a-fA-F-]{36}/[0-9a-fA-F-]{36}/[0-9a-fA-F-]{36}/[0-9a-fA-F-]{36}\.(pdf|jpg|jpeg|png|webp)$' then
     return false;
   end if;
 
-  request_id := split_part(object_name, '/', 1)::uuid;
+  path_parts := string_to_array(object_name, '/');
+  request_id := path_parts[3]::uuid;
   return exists (
     select 1
     from public.verification_requests vr
+    join public.businesses b on b.id = vr.business_id
     where vr.id = request_id
+      and b.organization_id = path_parts[1]::uuid
+      and vr.business_id = path_parts[2]::uuid
       and public.is_org_member(vr.organization_id)
   );
 end;
