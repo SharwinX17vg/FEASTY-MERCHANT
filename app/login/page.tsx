@@ -10,6 +10,8 @@ import {
   PrimaryButton,
   SecondaryButton,
 } from "@/components/ui";
+import { getNetworkErrorMessage, getSafeAuthError } from "@/lib/auth/errors";
+import { validateLoginInput } from "@/lib/validation/auth";
 
 type FormErrors = {
   email?: string;
@@ -61,39 +63,30 @@ export default function LoginPage() {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
-    const email = String(formData.get("email") ?? "").trim();
-    const password = String(formData.get("password") ?? "");
-    const nextErrors: FormErrors = {};
+    const validation = validateLoginInput({
+      email: formData.get("email"),
+      password: formData.get("password"),
+    });
 
-    if (!email) {
-      nextErrors.email = "Email is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      nextErrors.email = "Enter a valid email address.";
-    }
-
-    if (!password) {
-      nextErrors.password = "Password is required.";
-    }
-
-    setErrors(nextErrors);
+    setErrors(validation.errors);
     setFormError("");
-    if (Object.keys(nextErrors).length > 0) return;
+    if (Object.keys(validation.errors).length > 0) return;
 
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: validation.email, password: validation.password }),
       });
       const result = (await response.json()) as { message?: string };
       if (!response.ok) {
-        setFormError(result.message ?? "Unable to sign in.");
+        setFormError(getSafeAuthError(response.status, result.message, "Unable to sign in."));
         return;
       }
       router.push("/dashboard");
     } catch {
-      setFormError("Unable to reach the login service. Try again.");
+      setFormError(getNetworkErrorMessage());
     } finally {
       setIsSubmitting(false);
     }
@@ -106,12 +99,12 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/oauth", { method: "POST" });
       const result = (await response.json()) as { message?: string; url?: string };
       if (!response.ok || !result.url) {
-        setFormError(result.message ?? "Google sign-in is unavailable.");
+        setFormError(getSafeAuthError(response.status, result.message, "Google sign-in is unavailable."));
         return;
       }
       window.location.assign(result.url);
     } catch {
-      setFormError("Unable to reach Google sign-in. Try again.");
+      setFormError(getNetworkErrorMessage());
     } finally {
       setIsSubmitting(false);
     }

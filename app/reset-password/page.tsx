@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 
 import { Card, Input, PrimaryButton } from "@/components/ui";
+import { getNetworkErrorMessage, getSafeAuthError } from "@/lib/auth/errors";
 import { getPasswordRequirements, getPasswordStrength, validatePassword } from "@/lib/validation/auth";
 
 function Icon({ hidden }: { hidden: boolean }) {
@@ -48,10 +49,10 @@ export default function ResetPasswordPage() {
         }),
       });
       const result = (await response.json()) as { message?: string };
-      if (!response.ok) setError(result.message ?? "Unable to reset your password.");
+      if (!response.ok) setError(getSafeAuthError(response.status, result.message, "Unable to reset your password."));
       else setMessage("Your password has been updated. You can now sign in.");
     } catch {
-      setError("Unable to reach the reset service. Try again.");
+      setError(getNetworkErrorMessage());
     } finally {
       setPending(false);
     }

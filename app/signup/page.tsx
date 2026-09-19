@@ -13,8 +13,9 @@ import {
   normalizePhone,
   reformatPhone,
   supportedCountries,
-  validatePassword,
+  validateSignupInput,
 } from "@/lib/validation/auth";
+import { getNetworkErrorMessage, getSafeAuthError } from "@/lib/auth/errors";
 
 type FormErrors = {
   name?: string;
@@ -130,26 +131,17 @@ export default function SignupPage() {
     const submittedConfirmPassword = String(formData.get("confirmPassword") ?? "");
     const nextErrors: FormErrors = {};
 
-    if (!String(formData.get("name") ?? "").trim()) {
-      nextErrors.name = "Full name is required.";
-    }
-    if (!email) {
-      nextErrors.email = "Business email is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      nextErrors.email = "Enter a valid email address.";
-    }
+    const validation = validateSignupInput({
+      name: formData.get("name"),
+      email,
+      country,
+      phone,
+      password,
+      confirmPassword: submittedConfirmPassword,
+      termsAccepted,
+    });
+    Object.assign(nextErrors, validation.errors);
     if ("error" in phoneResult) nextErrors.phone = phoneResult.error;
-    if (!password) {
-      nextErrors.password = "Password is required.";
-    } else if (validatePassword(password)) {
-      nextErrors.password = validatePassword(password);
-    }
-    if (!confirmPassword) {
-      nextErrors.confirmPassword = "Please confirm your password.";
-    } else if (password !== submittedConfirmPassword) {
-      nextErrors.confirmPassword = "Passwords do not match.";
-    }
-    if (!termsAccepted) nextErrors.terms = "Please accept the Terms & Privacy Policy.";
     setErrors(nextErrors);
     setFormError("");
     if (Object.keys(nextErrors).length > 0) return;
@@ -176,12 +168,12 @@ export default function SignupPage() {
       };
       if (!response.ok) {
         setErrors(result.errors ?? {});
-        setFormError(result.message ?? "");
+        setFormError(getSafeAuthError(response.status, result.message));
         return;
       }
       window.location.assign(result.confirmed ? "/register/business-type" : "/check-email");
     } catch {
-      setFormError("Unable to reach the signup service. Try again.");
+      setFormError(getNetworkErrorMessage());
     } finally {
       setIsSubmitting(false);
     }
@@ -194,12 +186,12 @@ export default function SignupPage() {
       const response = await fetch("/api/auth/oauth", { method: "POST" });
       const result = (await response.json()) as { message?: string; url?: string };
       if (!response.ok || !result.url) {
-        setFormError(result.message ?? "Google sign-in is unavailable.");
+        setFormError(getSafeAuthError(response.status, result.message, "Google sign-in is unavailable."));
         return;
       }
       window.location.assign(result.url);
     } catch {
-      setFormError("Unable to reach Google sign-in. Try again.");
+      setFormError(getNetworkErrorMessage());
     } finally {
       setIsSubmitting(false);
     }

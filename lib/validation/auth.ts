@@ -24,6 +24,26 @@ export function normalizeEmail(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
 }
 
+export function validateEmail(value: unknown) {
+  const email = normalizeEmail(value);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    ? undefined
+    : "Enter a valid email address.";
+}
+
+export function validateLoginInput(input: Record<string, unknown>) {
+  const email = normalizeEmail(input.email);
+  const password = String(input.password ?? "");
+  const errors: { email?: string; password?: string } = {};
+  if (!email) errors.email = "Email is required.";
+  else {
+    const emailError = validateEmail(email);
+    if (emailError) errors.email = emailError;
+  }
+  if (!password) errors.password = "Password is required.";
+  return { errors, email, password };
+}
+
 export function validatePassword(value: unknown) {
   const password = String(value ?? "");
   const requirements = getPasswordRequirements(password);
@@ -122,7 +142,8 @@ export function validateSignupInput(input: Record<string, unknown>) {
   const errors: Record<string, string> = {};
 
   if (name.length < 2) errors.name = "Enter your full name.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "Enter a valid email address.";
+  const emailError = validateEmail(email);
+  if (emailError) errors.email = emailError;
   if (!country || !getCountries().includes(country)) errors.country = "Select a valid country.";
   if (country) {
     const phoneResult = normalizePhone(phone, country);

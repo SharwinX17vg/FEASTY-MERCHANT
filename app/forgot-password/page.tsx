@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 import { Card, Input, PrimaryButton } from "@/components/ui";
+import { getNetworkErrorMessage, getSafeAuthError } from "@/lib/auth/errors";
+import { normalizeEmail, validateEmail } from "@/lib/validation/auth";
 
 export default function ForgotPasswordPage() {
   const [message, setMessage] = useState("");
@@ -12,9 +14,14 @@ export default function ForgotPasswordPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setPending(true);
     setError("");
-    const email = String(new FormData(event.currentTarget).get("email") ?? "").trim();
+    const email = normalizeEmail(new FormData(event.currentTarget).get("email"));
+    const emailError = validateEmail(email);
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
+    setPending(true);
     try {
       const response = await fetch("/api/auth/forgot-password", {
         method: "POST",
@@ -22,10 +29,10 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({ email }),
       });
       const result = (await response.json()) as { message?: string };
-      if (!response.ok) setError(result.message ?? "Unable to send a reset email.");
+      if (!response.ok) setError(getSafeAuthError(response.status, result.message, "Unable to send a reset email."));
       else setMessage("If an account uses that email, a reset link will arrive shortly.");
     } catch {
-      setError("Unable to reach the reset service. Try again.");
+      setError(getNetworkErrorMessage());
     } finally {
       setPending(false);
     }

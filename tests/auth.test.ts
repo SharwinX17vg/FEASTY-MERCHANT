@@ -3,6 +3,11 @@ import test from "node:test";
 
 import { getSafeNextPath } from "../lib/auth/redirect.ts";
 import {
+  getNetworkErrorMessage,
+  getSafeAuthError,
+  NETWORK_ERROR_MESSAGE,
+} from "../lib/auth/errors.ts";
+import {
   getOnboardingRoute,
   isOnboardingState,
   ONBOARDING_STATES,
@@ -16,6 +21,8 @@ import {
   normalizePhone,
   reformatPhone,
   validatePassword,
+  validateEmail,
+  validateLoginInput,
   validateSignupInput,
 } from "../lib/validation/auth.ts";
 import {
@@ -36,6 +43,27 @@ test("safe redirect handling allows internal paths and rejects external paths", 
   assert.equal(getSafeNextPath("//example.com"), "/dashboard");
   assert.equal(getSafeNextPath("https://example.com"), "/dashboard");
   assert.equal(getSafeNextPath(null, "/login"), "/login");
+});
+
+test("auth errors are mapped to safe, retryable messages", () => {
+  assert.equal(getSafeAuthError(401, "database password mismatch"), "Email or password is incorrect.");
+  assert.equal(getSafeAuthError(503, "secret stack trace"), "The authentication service is temporarily unavailable. Please try again.");
+  assert.equal(getSafeAuthError(400, "SQLSTATE 23505"), "Something went wrong. Please try again.");
+  assert.equal(getNetworkErrorMessage(), NETWORK_ERROR_MESSAGE);
+});
+
+test("login and email validation use shared rules", () => {
+  assert.equal(validateEmail("merchant@example.com"), undefined);
+  assert.equal(validateEmail("not-an-email"), "Enter a valid email address.");
+  assert.deepEqual(validateLoginInput({ email: "", password: "" }).errors, {
+    email: "Email is required.",
+    password: "Password is required.",
+  });
+  assert.deepEqual(validateLoginInput({ email: " MERCHANT@EXAMPLE.COM ", password: "secret" }), {
+    errors: {},
+    email: "merchant@example.com",
+    password: "secret",
+  });
 });
 
 test("onboarding state resolver handles every persisted progress state", () => {
