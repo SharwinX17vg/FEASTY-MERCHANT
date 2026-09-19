@@ -8,6 +8,8 @@ import { Card, Input, PrimaryButton, SecondaryButton } from "@/components/ui";
 import {
   detectPhoneCountry,
   formatPhone,
+  getPasswordRequirements,
+  getPasswordStrength,
   normalizePhone,
   reformatPhone,
   supportedCountries,
@@ -62,6 +64,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [country, setCountry] = useState("IN");
@@ -73,23 +76,9 @@ export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const countrySearchRef = useRef<HTMLInputElement>(null);
 
-  const passwordStrength = useMemo(() => {
-    let score = 0;
-    if (password.length >= 8) score += 1;
-    if (/[A-Z]/.test(password)) score += 1;
-    if (/[0-9]/.test(password)) score += 1;
-    if (/[^A-Za-z0-9]/.test(password)) score += 1;
-    return score;
-  }, [password]);
-
-  const strengthLabel =
-    passwordStrength === 0
-      ? "Enter a password"
-      : passwordStrength < 2
-        ? "Weak password"
-        : passwordStrength < 4
-          ? "Good password"
-          : "Strong password";
+  const passwordRequirements = useMemo(() => getPasswordRequirements(password), [password]);
+  const passwordStrength = getPasswordStrength(password);
+  const confirmMismatch = Boolean(confirmPassword) && password !== confirmPassword;
 
   const filteredCountries = useMemo(() => {
     const query = countrySearch.trim().toLowerCase();
@@ -138,7 +127,7 @@ export default function SignupPage() {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const phoneResult = normalizePhone(phone, country as CountryCode);
-    const confirmPassword = String(formData.get("confirmPassword") ?? "");
+    const submittedConfirmPassword = String(formData.get("confirmPassword") ?? "");
     const nextErrors: FormErrors = {};
 
     if (!String(formData.get("name") ?? "").trim()) {
@@ -157,7 +146,7 @@ export default function SignupPage() {
     }
     if (!confirmPassword) {
       nextErrors.confirmPassword = "Please confirm your password.";
-    } else if (password !== confirmPassword) {
+    } else if (password !== submittedConfirmPassword) {
       nextErrors.confirmPassword = "Passwords do not match.";
     }
     if (!termsAccepted) nextErrors.terms = "Please accept the Terms & Privacy Policy.";
@@ -176,7 +165,7 @@ export default function SignupPage() {
           country,
           phone: "e164" in phoneResult ? phoneResult.e164 : phone,
           password,
-          confirmPassword,
+          confirmPassword: submittedConfirmPassword,
           termsAccepted,
         }),
       });
@@ -416,15 +405,15 @@ export default function SignupPage() {
                 >
                   <Icon name={showPassword ? "eyeOff" : "eye"} className="size-5" />
                 </button>
-                <div className="mt-2 flex items-center gap-2">
+                <div aria-live="polite" className="mt-2 flex items-center gap-2">
                   <div className="flex flex-1 gap-1">
-                    {[1, 2, 3, 4].map((level) => (
+                    {[1, 2, 3, 4, 5].map((level) => (
                       <span
                         className={`h-1 flex-1 rounded-full transition-colors ${
-                          level <= passwordStrength
-                            ? passwordStrength >= 4
+                          level <= passwordStrength.score
+                            ? passwordStrength.label === "Strong"
                               ? "bg-emerald-400"
-                              : passwordStrength >= 2
+                              : passwordStrength.label === "Fair"
                                 ? "bg-primary"
                                 : "bg-red-400"
                             : "bg-white/10"
@@ -433,7 +422,18 @@ export default function SignupPage() {
                       />
                     ))}
                   </div>
-                  <span className="text-[11px] text-muted">{strengthLabel}</span>
+                  <span className="text-[11px] text-muted">
+                    {password ? passwordStrength.label : "Enter a password"}
+                  </span>
+                </div>
+                <div aria-label="Password requirements" className="mt-3 space-y-1 text-xs" id="password-requirements">
+                  <p className="font-medium text-muted">Password requirements</p>
+                  {passwordRequirements.map((requirement) => (
+                    <p className={requirement.met ? "text-emerald-300" : "text-muted"} key={requirement.id}>
+                      <span aria-hidden="true" className="mr-2">{requirement.met ? "✓" : "○"}</span>
+                      {requirement.label}
+                    </p>
+                  ))}
                 </div>
               </div>
 
@@ -444,6 +444,7 @@ export default function SignupPage() {
                   error={errors.confirmPassword}
                   label="Confirm Password"
                   name="confirmPassword"
+                  onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="Repeat your password"
                   type={showConfirmPassword ? "text" : "password"}
                 />
@@ -455,6 +456,11 @@ export default function SignupPage() {
                 >
                   <Icon name={showConfirmPassword ? "eyeOff" : "eye"} className="size-5" />
                 </button>
+                {confirmMismatch ? (
+                  <p aria-live="polite" className="mt-2 text-sm text-red-300">
+                    Passwords do not match.
+                  </p>
+                ) : null}
               </div>
 
               <label className="flex items-start gap-3 pt-1 text-sm text-muted">

@@ -4,6 +4,8 @@ import test from "node:test";
 import { getSafeNextPath } from "../lib/auth/redirect.ts";
 import {
   detectPhoneCountry,
+  getPasswordRequirements,
+  getPasswordStrength,
   normalizeEmail,
   normalizePhone,
   reformatPhone,
@@ -34,6 +36,22 @@ test("password validation rejects passwords missing each required strength rule"
 
 test("password validation accepts a strong password", () => {
   assert.equal(validatePassword("Longpassword1!"), undefined);
+});
+
+test("password feedback uses the same requirements as validation", () => {
+  assert.deepEqual(
+    getPasswordRequirements("Longpassword1!").map(({ id, met }) => ({ id, met })),
+    [
+      { id: "length", met: true },
+      { id: "uppercase", met: true },
+      { id: "lowercase", met: true },
+      { id: "number", met: true },
+      { id: "symbol", met: true },
+    ],
+  );
+  assert.deepEqual(getPasswordStrength("weak"), { score: 1, label: "Weak" });
+  assert.deepEqual(getPasswordStrength("Longpassword1"), { score: 4, label: "Fair" });
+  assert.deepEqual(getPasswordStrength("Longpassword1!"), { score: 5, label: "Strong" });
 });
 
 test("normalizes a valid Indian phone number to E.164", () => {

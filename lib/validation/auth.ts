@@ -26,12 +26,55 @@ export function normalizeEmail(value: unknown) {
 
 export function validatePassword(value: unknown) {
   const password = String(value ?? "");
-  if (password.length < 8) return "Use at least 8 characters.";
-  if (!/[A-Z]/.test(password)) return "Include at least one uppercase letter.";
-  if (!/[a-z]/.test(password)) return "Include at least one lowercase letter.";
-  if (!/[0-9]/.test(password)) return "Include at least one number.";
-  if (!/[^A-Za-z0-9]/.test(password)) return "Include at least one symbol.";
+  const requirements = getPasswordRequirements(password);
+  const missingRequirement = requirements.find((requirement) => !requirement.met);
+  if (missingRequirement) return missingRequirement.error;
   return undefined;
+}
+
+export function getPasswordRequirements(value: unknown) {
+  const password = String(value ?? "");
+  return [
+    {
+      id: "length",
+      label: "Minimum 8 characters",
+      met: password.length >= 8,
+      error: "Use at least 8 characters.",
+    },
+    {
+      id: "uppercase",
+      label: "One uppercase letter",
+      met: /[A-Z]/.test(password),
+      error: "Include at least one uppercase letter.",
+    },
+    {
+      id: "lowercase",
+      label: "One lowercase letter",
+      met: /[a-z]/.test(password),
+      error: "Include at least one lowercase letter.",
+    },
+    {
+      id: "number",
+      label: "One number",
+      met: /[0-9]/.test(password),
+      error: "Include at least one number.",
+    },
+    {
+      id: "symbol",
+      label: "One special character",
+      met: /[^A-Za-z0-9]/.test(password),
+      error: "Include at least one symbol.",
+    },
+  ];
+}
+
+export function getPasswordStrength(value: unknown) {
+  const requirements = getPasswordRequirements(value);
+  const score = requirements.filter((requirement) => requirement.met).length;
+  return {
+    score,
+    label: score === 5 ? "Strong" : score >= 3 ? "Fair" : "Weak",
+  } as const;
 }
 
 export function formatPhone(value: string, country: CountryCode) {
