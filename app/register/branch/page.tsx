@@ -1,14 +1,27 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { Card, Input, PrimaryButton } from "@/components/ui";
+import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 
 export default function BranchPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/onboarding/state")
+      .then(async (response) => {
+        if (!response.ok) return;
+        const result = (await response.json()) as { state?: string };
+        if (result.state === "NOT_STARTED" || result.state === "BUSINESS_TYPE_SELECTED") router.push("/register/business");
+        if (result.state === "BRANCH_CREATED" || result.state === "VERIFICATION_IN_PROGRESS") router.push("/register/verification");
+        if (result.state === "COMPLETED") router.push("/dashboard");
+      })
+      .catch(() => setError("Unable to load saved onboarding progress."));
+  }, [router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,7 +48,8 @@ export default function BranchPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-16">
       <Card className="w-full max-w-2xl p-6 sm:p-9">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Step 3 of 3</p>
+        <OnboardingProgress currentStep={3} />
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Step 3 of 4</p>
         <h1 className="mt-3 text-3xl font-semibold text-white">Add your first location</h1>
         {error ? <p className="mt-5 rounded-xl bg-red-400/10 px-4 py-3 text-sm text-red-200" role="alert">{error}</p> : null}
         <form className="mt-7 grid gap-5 sm:grid-cols-2" onSubmit={handleSubmit}>

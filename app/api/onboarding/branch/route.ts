@@ -16,6 +16,18 @@ export async function POST(request: Request) {
     if (!membership) return NextResponse.json({ message: "Complete business details first." }, { status: 400 });
     const { data: business } = await supabase.from("businesses").select("id").eq("organization_id", membership.organization_id).maybeSingle();
     if (!business) return NextResponse.json({ message: "Complete business details first." }, { status: 400 });
+    const existingBranch = await supabase
+      .from("branches")
+      .select("id")
+      .eq("business_id", business.id)
+      .maybeSingle();
+    if (existingBranch.error) {
+      return NextResponse.json({ message: "Unable to check existing branch records." }, { status: 400 });
+    }
+    if (existingBranch.data) {
+      return NextResponse.json({ id: existingBranch.data.id, existing: true });
+    }
+
     const branch = await supabase.from("branches").insert({
       business_id: business.id,
       name: input.name,

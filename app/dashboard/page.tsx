@@ -1,4 +1,7 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { getCurrentOnboarding } from "@/lib/onboarding/server";
+import { getOnboardingRoute, ONBOARDING_STATES } from "@/lib/onboarding/state";
+import { redirect } from "next/navigation";
 import {
   DashboardIcon,
   type DashboardIconName,
@@ -20,6 +23,11 @@ const quickActions: Array<[string, DashboardIconName]> = [
 ];
 
 export default async function DashboardPage() {
+  const onboarding = await getCurrentOnboarding().catch(() => null);
+  if (onboarding && onboarding.state !== ONBOARDING_STATES.COMPLETED && onboarding.state !== ONBOARDING_STATES.VERIFICATION_IN_PROGRESS) {
+    redirect(getOnboardingRoute(onboarding.state));
+  }
+
   let userName = "merchant";
   try {
     const supabase = await getSupabaseServerClient();

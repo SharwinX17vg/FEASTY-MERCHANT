@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentOnboarding } from "@/lib/onboarding/server";
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +12,8 @@ export async function POST(request: Request) {
       phone?: string;
     };
     const name = String(input.name ?? "").trim();
-    const category = String(input.category ?? "").trim();
+    const current = await getCurrentOnboarding();
+    const category = String(input.category ?? current?.category ?? "").trim();
     if (name.length < 2 || category.length < 2) {
       return NextResponse.json({ message: "Business name and category are required." }, { status: 400 });
     }
@@ -47,7 +49,9 @@ export async function POST(request: Request) {
 
     const existing = await supabase.from("businesses").select("id").eq("organization_id", organizationId).maybeSingle();
     if (existing.error) return NextResponse.json({ message: "Unable to check existing business records." }, { status: 400 });
-    if (existing.data) return NextResponse.json({ id: existing.data.id });
+    if (existing.data) {
+      return NextResponse.json({ id: existing.data.id, existing: true });
+    }
 
     const business = await supabase
       .from("businesses")

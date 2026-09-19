@@ -3,6 +3,12 @@ import test from "node:test";
 
 import { getSafeNextPath } from "../lib/auth/redirect.ts";
 import {
+  getOnboardingRoute,
+  isOnboardingState,
+  ONBOARDING_STATES,
+  resolveOnboardingState,
+} from "../lib/onboarding/state.ts";
+import {
   detectPhoneCountry,
   getPasswordRequirements,
   getPasswordStrength,
@@ -24,6 +30,48 @@ test("safe redirect handling allows internal paths and rejects external paths", 
   assert.equal(getSafeNextPath("//example.com"), "/dashboard");
   assert.equal(getSafeNextPath("https://example.com"), "/dashboard");
   assert.equal(getSafeNextPath(null, "/login"), "/login");
+});
+
+test("onboarding state resolver handles every persisted progress state", () => {
+  assert.equal(resolveOnboardingState({}), ONBOARDING_STATES.NOT_STARTED);
+  assert.equal(
+    resolveOnboardingState({ category: "Restaurant" }),
+    ONBOARDING_STATES.BUSINESS_TYPE_SELECTED,
+  );
+  assert.equal(
+    resolveOnboardingState({ business: { id: "business-1" } }),
+    ONBOARDING_STATES.BUSINESS_CREATED,
+  );
+  assert.equal(
+    resolveOnboardingState({
+      business: { id: "business-1" },
+      branch: { id: "branch-1" },
+    }),
+    ONBOARDING_STATES.BRANCH_CREATED,
+  );
+  assert.equal(
+    resolveOnboardingState({
+      business: { id: "business-1" },
+      branch: { id: "branch-1" },
+      verification: { status: "submitted" },
+    }),
+    ONBOARDING_STATES.VERIFICATION_IN_PROGRESS,
+  );
+  assert.equal(
+    resolveOnboardingState({
+      business: { id: "business-1" },
+      branch: { id: "branch-1" },
+      verification: { status: "approved" },
+    }),
+    ONBOARDING_STATES.COMPLETED,
+  );
+});
+
+test("onboarding routes and state validation reject unknown states", () => {
+  assert.equal(getOnboardingRoute(ONBOARDING_STATES.BUSINESS_CREATED), "/register/branch");
+  assert.equal(getOnboardingRoute(ONBOARDING_STATES.COMPLETED), "/dashboard");
+  assert.equal(isOnboardingState("UNKNOWN"), false);
+  assert.equal(isOnboardingState(ONBOARDING_STATES.NOT_STARTED), true);
 });
 
 test("password validation rejects passwords missing each required strength rule", () => {

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { Card, PrimaryButton } from "@/components/ui";
 
 type Category = {
@@ -118,7 +119,26 @@ function ArrowIcon() {
 
 export default function BusinessTypePage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/onboarding/state")
+      .then(async (response) => {
+        if (!response.ok) return;
+        const result = (await response.json()) as { category?: string; state?: string };
+        if (result.state && result.state !== "NOT_STARTED") {
+          if (result.state === "BUSINESS_TYPE_SELECTED") router.push("/register/business");
+          else if (result.state === "BUSINESS_CREATED") router.push("/register/branch");
+          else router.push("/register/verification");
+        } else if (result.category) {
+          setSelectedCategory(result.category);
+        }
+      })
+      .catch(() => setError("Unable to load saved onboarding progress."))
+      .finally(() => setLoading(false));
+  }, [router]);
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-background">
@@ -134,10 +154,11 @@ export default function BusinessTypePage() {
             </span>
             FEASTY<span className="text-primary">MERCHANT</span>
           </Link>
-          <span className="text-xs text-muted sm:text-sm">Step 1 of 3</span>
+          <span className="text-xs text-muted sm:text-sm">Step 1 of 4</span>
         </header>
 
         <div className="mx-auto max-w-3xl pb-16 pt-16 text-center sm:pt-20">
+          <OnboardingProgress currentStep={1} />
           <div className="mx-auto mb-6 flex size-12 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
             <Icon name="shop" />
           </div>
@@ -215,18 +236,24 @@ export default function BusinessTypePage() {
           </div>
           <PrimaryButton
             className="w-full"
-            disabled={!selectedCategory}
-            onClick={() => {
-              if (selectedCategory) {
-                window.sessionStorage.setItem("feasty_onboarding_category", selectedCategory);
-                router.push("/register/business");
-              }
+            disabled={!selectedCategory || loading}
+            onClick={async () => {
+              if (!selectedCategory) return;
+              setError("");
+              const response = await fetch("/api/onboarding/business-type", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ category: selectedCategory }),
+              });
+              if (response.ok) router.push("/register/business");
+              else setError("Unable to save your business category.");
             }}
             type="button"
           >
             Continue
             <ArrowIcon />
           </PrimaryButton>
+          {error ? <p className="mt-3 text-sm text-red-300" role="alert">{error}</p> : null}
           <p className="mt-5 text-xs text-muted sm:text-sm">
             You can change this later from Business Settings.
           </p>
