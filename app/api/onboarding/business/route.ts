@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       const member = await supabase.from("organization_members").insert({
         organization_id: organizationId,
         user_id: authData.user.id,
-        role: "owner",
+        role: "org_owner",
         joined_at: new Date().toISOString(),
       });
       if (member.error) return NextResponse.json({ message: "Unable to save organization membership." }, { status: 400 });

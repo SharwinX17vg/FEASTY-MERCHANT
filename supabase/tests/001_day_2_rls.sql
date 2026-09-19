@@ -1,6 +1,6 @@
 begin;
 
-select plan(12);
+select plan(24);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'organizations', 'organizations table exists');
@@ -14,14 +14,26 @@ select has_index('public', 'organizations', 'organizations_code_key', 'organizat
 select has_index('public', 'businesses', 'businesses_code_key', 'business code is unique');
 select has_index('public', 'branches', 'branches_code_key', 'branch code is unique');
 select has_index('public', 'verification_requests', 'verification_requests_code_key', 'verification code is unique');
+select has_policy('public', 'organizations', 'organizations_select_member', 'organizations are member-scoped');
+select has_policy('public', 'organization_members', 'organization_members_select_member', 'memberships are member-scoped');
+select has_policy('public', 'businesses', 'businesses_select_member', 'businesses are organization-scoped');
+select has_policy('public', 'businesses', 'businesses_update_manager', 'business updates are role-scoped');
+select has_policy('public', 'businesses', 'businesses_delete_manager', 'business deletes are owner/admin-scoped');
+select has_policy('public', 'branches', 'branches_select_member', 'branches flow through business membership');
+select has_policy('public', 'branches', 'branches_update_manager', 'branch updates are role-scoped');
+select has_policy('public', 'branches', 'branches_delete_manager', 'branch deletes are role-scoped');
+select has_policy('public', 'verification_requests', 'verification_requests_insert_member', 'verification submissions are member-scoped');
+select has_policy('public', 'verification_requests', 'verification_requests_update_platform_reviewer', 'verification decisions are platform-scoped');
+select has_policy('public', 'audit_logs', 'audit_logs_insert_member', 'audit logs are insert-only for actors');
+select has_function('public', 'prevent_verification_decision_changes', ARRAY[]::text[], 'verification decisions have a database guard');
 
 select * from finish();
 rollback;
 
 -- Integration scenarios for a configured Supabase test project:
--- 1. Anonymous users may select approved businesses and active branches only.
--- 2. Anonymous users cannot select profiles, organizations, members, or verification data.
--- 3. An authenticated organization member may read that organization and its businesses.
--- 4. An authenticated member cannot read another organization's private data.
--- 5. Only organization owners/admins may manage members or review verification requests.
--- 6. A non-member cannot insert businesses, branches, verification requests, or audit records.
+-- A. anon cannot read organizations, memberships, private businesses, branches, or verification data.
+-- B. an Organization A member can read Organization A but not Organization B.
+-- C. a branch_manager cannot update or delete Organization B branches.
+-- D. a merchant cannot approve a verification request or assign a reviewer.
+-- E. an ordinary member cannot update platform_role or update/delete audit logs.
+-- F. an org_owner can manage Organization A business/branch records, but not verification decisions.

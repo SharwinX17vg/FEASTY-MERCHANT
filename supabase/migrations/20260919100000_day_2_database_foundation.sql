@@ -33,7 +33,7 @@ create table public.profiles (
   email text,
   phone text,
   platform_role text not null default 'user'
-    check (platform_role in ('user', 'platform_admin')),
+    check (platform_role in ('user', 'platform_admin', 'super_admin')),
   status text not null default 'active'
     check (status in ('active', 'suspended', 'deleted')),
   created_at timestamptz not null default timezone('utc', now()),
@@ -58,8 +58,8 @@ create table public.organizations (
 create table public.organization_members (
   organization_id uuid not null references public.organizations(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
-  role text not null default 'member'
-    check (role in ('owner', 'admin', 'member', 'viewer')),
+  role text not null default 'staff'
+    check (role in ('admin', 'moderator', 'org_owner', 'branch_manager', 'staff')),
   status text not null default 'active'
     check (status in ('invited', 'active', 'suspended', 'removed')),
   invited_by uuid references public.profiles(id) on delete set null,
@@ -204,7 +204,7 @@ begin
     insert into public.organization_members (
       organization_id, user_id, role, status, joined_at
     )
-    values (new.id, new.created_by, 'owner', 'active', timezone('utc', now()))
+    values (new.id, new.created_by, 'org_owner', 'active', timezone('utc', now()))
     on conflict (organization_id, user_id) do nothing;
   end if;
   return new;
@@ -270,7 +270,7 @@ as $$
     where organization_id = target_organization_id
       and user_id = (select auth.uid())
       and status = 'active'
-      and role in ('owner', 'admin')
+      and role in ('org_owner', 'admin')
   );
 $$;
 
