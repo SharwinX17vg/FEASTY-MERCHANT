@@ -6,27 +6,10 @@ import {
   StatCard,
 } from "@/components/dashboard/DashboardWidgets";
 import { Card, EmptyState, PrimaryButton, SecondaryButton } from "@/components/ui";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-const activities: Array<[string, string, string, DashboardIconName]> = [
-  ["Offer published", "Lunch special is now live on FEASTYMAP.", "10 min ago", "offer"],
-  ["Business verification submitted", "Your documents are under review.", "2 hours ago", "check"],
-  ["Menu updated", "You added 3 new menu items.", "Yesterday", "menu"],
-  ["Event scheduled", "Friday evening event was added.", "Yesterday", "calendar"],
-];
-
-const notifications = [
-  ["Verification reminder", "Complete your documents to get verified.", "Complete now", "clock"],
-  ["Missing opening hours", "Add hours so customers know when to visit.", "Add hours", "clock"],
-  ["New feature available", "Try publishing a special for today.", "Explore", "sparkle"],
-] as const;
-
-const checklist = [
-  ["Business Information", true],
-  ["Location", true],
-  ["Menu", true],
-  ["Opening Hours", false],
-  ["Verification Documents", false],
-] as const;
+const activities: Array<[string, string, string, DashboardIconName]> = [];
+const notifications: Array<[string, string, string, DashboardIconName]> = [];
 
 const quickActions: Array<[string, DashboardIconName]> = [
   ["Add Offer", "offer"],
@@ -36,15 +19,24 @@ const quickActions: Array<[string, DashboardIconName]> = [
   ["Add Branch", "pin"],
 ];
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  let userName = "merchant";
+  try {
+    const supabase = await getSupabaseServerClient();
+    const { data } = await supabase.auth.getUser();
+    userName = data.user?.user_metadata?.display_name ?? data.user?.email?.split("@")[0] ?? userName;
+  } catch {
+    // The proxy allows the visual shell to render without local Supabase configuration.
+  }
+
   return (
-    <DashboardLayout activeItem="Dashboard">
+    <DashboardLayout activeItem="Dashboard" userName={userName}>
       <div className="min-h-screen bg-background">
         <div className="mx-auto max-w-[1600px] px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
           <section className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
               <p className="text-sm text-muted">Welcome back,</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Merchant Name</h1>
+              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white sm:text-4xl">{userName}</h1>
               <p className="mt-2 text-sm text-muted">Here&apos;s what&apos;s happening with your business today.</p>
             </div>
             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-300">
@@ -61,22 +53,24 @@ export default function DashboardPage() {
                 </div>
                 <div className="mt-5 flex items-center gap-3"><ProgressBar value={60} /><span className="text-sm font-semibold text-primary">60%</span></div>
               </div>
-              <PrimaryButton className="shrink-0">Complete Profile <DashboardIcon name="arrow" className="ml-2 size-4" /></PrimaryButton>
+              <a href="/register/business-type">
+                <PrimaryButton className="shrink-0">Complete Profile <DashboardIcon name="arrow" className="ml-2 size-4" /></PrimaryButton>
+              </a>
             </div>
           </Card>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard accent="bg-primary/15 text-primary" icon="offer" label="Active Offers" value="08" change="+12%" />
-            <StatCard accent="bg-sky-400/15 text-sky-300" icon="calendar" label="Upcoming Events" value="03" change="+2 this week" />
-            <StatCard accent="bg-violet-400/15 text-violet-300" icon="menu" label="Menu Items" value="42" change="+3 new" />
-            <StatCard accent="bg-amber-400/15 text-amber-300" icon="review" label="Customer Reviews" value="128" change="+8 this month" />
+            <StatCard accent="bg-primary/15 text-primary" icon="offer" label="Active Offers" value="—" change="No data yet" />
+            <StatCard accent="bg-sky-400/15 text-sky-300" icon="calendar" label="Upcoming Events" value="—" change="No data yet" />
+            <StatCard accent="bg-violet-400/15 text-violet-300" icon="menu" label="Menu Items" value="—" change="No data yet" />
+            <StatCard accent="bg-amber-400/15 text-amber-300" icon="review" label="Customer Reviews" value="—" change="No data yet" />
           </div>
 
           <section className="mt-8">
             <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Quick actions</h2><span className="text-xs text-muted">Keep your presence fresh</span></div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {quickActions.map(([label, icon]) => (
-                <SecondaryButton className="justify-start" key={label}><DashboardIcon name={icon} className="mr-3 size-4 text-primary" />{label}</SecondaryButton>
+                <SecondaryButton className="justify-start" disabled key={label} title="This workspace action is not available yet"><DashboardIcon name={icon} className="mr-3 size-4 text-primary" />{label}</SecondaryButton>
               ))}
             </div>
           </section>
@@ -102,7 +96,9 @@ export default function DashboardPage() {
             <Card className="p-5 sm:p-6">
               <h2 className="text-lg font-semibold text-white">Notifications</h2>
               <div className="mt-5 space-y-3">
-                {notifications.map(([title, description, action, icon]) => (
+                {notifications.length === 0 ? (
+                  <EmptyState description="Important account updates will appear here." title="No notifications" />
+                ) : notifications.map(([title, description, action, icon]) => (
                   <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4" key={title}>
                     <div className="flex gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><DashboardIcon name={icon} className="size-4" /></span><div><p className="text-sm font-medium text-white">{title}</p><p className="mt-1 text-xs leading-5 text-muted">{description}</p><button className="mt-2 text-xs font-semibold text-primary hover:text-accent" type="button">{action} →</button></div></div>
                   </div>
@@ -115,12 +111,17 @@ export default function DashboardPage() {
             <Card className="p-5 sm:p-6">
               <div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold text-white">Analytics preview</h2><p className="mt-1 text-xs text-muted">Last 30 days</p></div><DashboardIcon name="chart" className="text-primary" /></div>
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                {[["Views", "12,480", 78], ["Offer Clicks", "3,240", 56], ["Profile Visits", "8,920", 68], ["Customer Engagement", "74%", 74]].map(([label, value, progress]) => <div key={label}><div className="flex justify-between text-sm"><span className="text-muted">{label}</span><span className="font-semibold text-white">{value}</span></div><div className="mt-3"><ProgressBar value={progress as number} /></div></div>)}
+                <EmptyState description="Analytics will appear after your business profile is published." title="No analytics yet" />
               </div>
             </Card>
             <Card className="p-5 sm:p-6">
-              <div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold text-white">Profile completion</h2><p className="mt-1 text-xs text-muted">3 of 5 steps complete</p></div><span className="text-xl font-semibold text-primary">60%</span></div>
-              <div className="mt-5 space-y-3">{checklist.map(([label, complete]) => <div className="flex items-center gap-3 text-sm" key={label}><span className={`flex size-5 items-center justify-center rounded-full ${complete ? "bg-primary text-primary-foreground" : "border border-white/20 text-transparent"}`}><DashboardIcon name="check" className="size-3" /></span><span className={complete ? "text-white" : "text-muted"}>{label}</span>{complete ? <span className="ml-auto text-xs text-emerald-400">Done</span> : <span className="ml-auto text-xs text-primary">Add</span>}</div>)}</div>
+              <h2 className="text-lg font-semibold text-white">Profile completion</h2>
+              <div className="mt-5">
+                <EmptyState
+                  description="Complete onboarding to see your profile progress."
+                  title="No profile data yet"
+                />
+              </div>
             </Card>
           </div>
         </div>

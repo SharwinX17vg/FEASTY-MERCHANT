@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Card, PrimaryButton } from "@/components/ui";
@@ -117,6 +118,7 @@ function ArrowIcon() {
 
 export default function BusinessTypePage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const router = useRouter();
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-background">
@@ -214,6 +216,12 @@ export default function BusinessTypePage() {
           <PrimaryButton
             className="w-full"
             disabled={!selectedCategory}
+            onClick={() => {
+              if (selectedCategory) {
+                window.sessionStorage.setItem("feasty_onboarding_category", selectedCategory);
+                router.push("/register/business");
+              }
+            }}
             type="button"
           >
             Continue

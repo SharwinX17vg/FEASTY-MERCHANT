@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 import {
@@ -52,8 +53,11 @@ function Icon({
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [formError, setFormError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
@@ -72,6 +76,45 @@ export default function LoginPage() {
     }
 
     setErrors(nextErrors);
+    setFormError("");
+    if (Object.keys(nextErrors).length > 0) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const result = (await response.json()) as { message?: string };
+      if (!response.ok) {
+        setFormError(result.message ?? "Unable to sign in.");
+        return;
+      }
+      router.push("/dashboard");
+    } catch {
+      setFormError("Unable to reach the login service. Try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setFormError("");
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/oauth", { method: "POST" });
+      const result = (await response.json()) as { message?: string; url?: string };
+      if (!response.ok || !result.url) {
+        setFormError(result.message ?? "Google sign-in is unavailable.");
+        return;
+      }
+      window.location.assign(result.url);
+    } catch {
+      setFormError("Unable to reach Google sign-in. Try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -146,6 +189,11 @@ export default function LoginPage() {
               </p>
             </div>
 
+            {formError ? (
+              <p className="mb-5 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200" role="alert">
+                {formError}
+              </p>
+            ) : null}
             <form className="space-y-5" onSubmit={handleSubmit} noValidate>
               <Input
                 autoComplete="email"
@@ -179,14 +227,14 @@ export default function LoginPage() {
               <div className="flex justify-end">
                 <Link
                   className="text-sm font-medium text-primary transition hover:text-accent"
-                  href="#"
+                  href="/forgot-password"
                 >
                   Forgot Password?
                 </Link>
               </div>
 
-              <PrimaryButton className="w-full" type="submit">
-                Login
+              <PrimaryButton className="w-full" disabled={isSubmitting} type="submit">
+                {isSubmitting ? "Signing in…" : "Login"}
                 <Icon name="arrow" className="ml-2 size-4" />
               </PrimaryButton>
 
@@ -196,7 +244,7 @@ export default function LoginPage() {
                 <span className="h-px flex-1 bg-white/10" />
               </div>
 
-              <SecondaryButton className="w-full" type="button">
+              <SecondaryButton className="w-full" disabled={isSubmitting} onClick={handleGoogleSignIn} type="button">
                 <Icon name="google" className="mr-2 size-4 text-[#4285F4]" />
                 Continue with Google
               </SecondaryButton>
@@ -206,7 +254,7 @@ export default function LoginPage() {
               New to FEASTY MERCHANT?{" "}
               <Link
                 className="font-semibold text-primary transition hover:text-accent"
-                href="#"
+                href="/signup"
               >
                 Create Business Account
               </Link>

@@ -1,7 +1,28 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import "server-only";
 
-import { createSupabaseClient } from "@/services/supabase";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
-export function getSupabaseServerClient(): SupabaseClient {
-  return createSupabaseClient();
+import { getSupabaseEnvironment } from "@/lib/supabase/config";
+
+export async function getSupabaseServerClient() {
+  const cookieStore = await cookies();
+  const { publishableKey, url } = getSupabaseEnvironment();
+
+  return createServerClient(url, publishableKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options),
+          );
+        } catch {
+          // Server Components cannot always mutate cookies. Proxy refreshes them.
+        }
+      },
+    },
+  });
 }

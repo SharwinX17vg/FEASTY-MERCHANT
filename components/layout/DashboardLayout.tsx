@@ -8,11 +8,13 @@ import { TopNavbar } from "./TopNavbar";
 type DashboardLayoutProps = {
   activeItem?: string;
   children: ReactNode;
+  userName?: string;
 };
 
 export function DashboardLayout({
   activeItem = "Dashboard",
   children,
+  userName,
 }: DashboardLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -38,6 +40,7 @@ export function DashboardLayout({
         <TopNavbar
           mobileOpen={mobileOpen}
           onMenuClick={() => setMobileOpen(true)}
+          userName={userName}
         />
         <main>{children}</main>
       </div>

@@ -127,6 +127,8 @@ function SectionHeading({
 }
 
 export default function Home() {
+  const feastymapUrl = process.env.NEXT_PUBLIC_FEASTYMAP_URL || "https://feastymap.com";
+
   return (
     <main className="overflow-hidden bg-background">
       <section className="relative isolate">
@@ -144,7 +146,9 @@ export default function Home() {
               <a className="transition hover:text-white" href="#features">Features</a>
               <a className="transition hover:text-white" href="#categories">Categories</a>
             </div>
-            <SecondaryButton className="min-h-10 px-4 py-2 text-xs sm:text-sm">Sign in</SecondaryButton>
+            <Link href="/login">
+              <SecondaryButton className="min-h-10 px-4 py-2 text-xs sm:text-sm">Sign in</SecondaryButton>
+            </Link>
           </nav>
         </PageContainer>
 
@@ -165,14 +169,18 @@ export default function Home() {
               beautiful place — then reach the people already looking for you on FEASTYMAP.
             </p>
             <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-              <PrimaryButton className="group">
-                Register Business
-                <Icon name="arrow" className="ml-2 size-4 transition group-hover:translate-x-1" />
-              </PrimaryButton>
-              <SecondaryButton>
-                Explore FEASTYMAP
-                <Icon name="globe" className="ml-2 size-4" />
-              </SecondaryButton>
+              <Link href="/signup">
+                <PrimaryButton className="group">
+                  Register Business
+                  <Icon name="arrow" className="ml-2 size-4 transition group-hover:translate-x-1" />
+                </PrimaryButton>
+              </Link>
+              <a href={feastymapUrl} rel="noreferrer" target="_blank">
+                <SecondaryButton>
+                  Explore FEASTYMAP
+                  <Icon name="globe" className="ml-2 size-4" />
+                </SecondaryButton>
+              </a>
             </div>
           </div>
 

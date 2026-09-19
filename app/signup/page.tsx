@@ -2,8 +2,14 @@
 
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
+import type { CountryCode } from "libphonenumber-js";
 
 import { Card, Input, PrimaryButton, SecondaryButton } from "@/components/ui";
+import {
+  formatPhone,
+  supportedCountries,
+  validatePassword,
+} from "@/lib/validation/auth";
 
 type FormErrors = {
   name?: string;
@@ -55,6 +61,9 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [country, setCountry] = useState("IN");
+  const [formError, setFormError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const passwordStrength = useMemo(() => {
     let score = 0;
@@ -74,7 +83,7 @@ export default function SignupPage() {
           ? "Good password"
           : "Strong password";
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
@@ -93,8 +102,8 @@ export default function SignupPage() {
     if (!phone) nextErrors.phone = "Phone number is required.";
     if (!password) {
       nextErrors.password = "Password is required.";
-    } else if (passwordStrength < 2) {
-      nextErrors.password = "Use at least 8 characters with a number or uppercase letter.";
+    } else if (validatePassword(password)) {
+      nextErrors.password = validatePassword(password);
     }
     if (!confirmPassword) {
       nextErrors.confirmPassword = "Please confirm your password.";
@@ -103,6 +112,58 @@ export default function SignupPage() {
     }
     if (!termsAccepted) nextErrors.terms = "Please accept the Terms & Privacy Policy.";
     setErrors(nextErrors);
+    setFormError("");
+    if (Object.keys(nextErrors).length > 0) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.get("name"),
+          email,
+          country,
+          phone,
+          password,
+          confirmPassword,
+          termsAccepted,
+        }),
+      });
+      const result = (await response.json()) as {
+        confirmed?: boolean;
+        errors?: FormErrors;
+        message?: string;
+      };
+      if (!response.ok) {
+        setErrors(result.errors ?? {});
+        setFormError(result.message ?? "");
+        return;
+      }
+      window.location.assign(result.confirmed ? "/register/business-type" : "/check-email");
+    } catch {
+      setFormError("Unable to reach the signup service. Try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleGoogleSignUp() {
+    setFormError("");
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/oauth", { method: "POST" });
+      const result = (await response.json()) as { message?: string; url?: string };
+      if (!response.ok || !result.url) {
+        setFormError(result.message ?? "Google sign-in is unavailable.");
+        return;
+      }
+      window.location.assign(result.url);
+    } catch {
+      setFormError("Unable to reach Google sign-in. Try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -161,6 +222,11 @@ export default function SignupPage() {
               </p>
             </div>
 
+            {formError ? (
+              <p className="mb-5 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200" role="alert">
+                {formError}
+              </p>
+            ) : null}
             <form className="space-y-4" onSubmit={handleSubmit} noValidate>
               <Input
                 autoComplete="name"
@@ -178,11 +244,33 @@ export default function SignupPage() {
                 placeholder="you@yourbusiness.com"
                 type="email"
               />
+              <label className="block space-y-2" htmlFor="country">
+                <span className="block text-sm font-medium text-foreground">Country</span>
+                <select
+                  className="min-h-11 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  id="country"
+                  name="country"
+                  onChange={(event) => setCountry(event.target.value)}
+                  value={country}
+                >
+                  {supportedCountries.map(({ country: code, callingCode }) => (
+                    <option className="bg-[#141414]" key={code} value={code}>
+                      {code} {callingCode}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <Input
                 autoComplete="tel"
                 error={errors.phone}
                 label="Phone Number"
                 name="phone"
+                onChange={(event) => {
+                  event.target.value = formatPhone(
+                    event.target.value,
+                    country as CountryCode,
+                  );
+                }}
                 placeholder="+1 555 000 0000"
                 type="tel"
               />
@@ -257,15 +345,15 @@ export default function SignupPage() {
                 />
                 <span>
                   I agree to the{" "}
-                  <Link className="text-primary transition hover:text-accent" href="#">
+                  <Link className="text-primary transition hover:text-accent" href="/login">
                     FEASTY MERCHANT Terms & Privacy Policy
                   </Link>
                   {errors.terms ? <span className="mt-1 block text-xs text-red-300">{errors.terms}</span> : null}
                 </span>
               </label>
 
-              <PrimaryButton className="w-full" type="submit">
-                Create Merchant Account
+              <PrimaryButton className="w-full" disabled={isSubmitting} type="submit">
+                {isSubmitting ? "Creating account…" : "Create Merchant Account"}
                 <Icon name="arrow" className="ml-2 size-4" />
               </PrimaryButton>
               <div className="flex items-center gap-3 py-1">
@@ -273,7 +361,7 @@ export default function SignupPage() {
                 <span className="text-xs uppercase tracking-wider text-muted">or</span>
                 <span className="h-px flex-1 bg-white/10" />
               </div>
-              <SecondaryButton className="w-full" type="button">
+              <SecondaryButton className="w-full" disabled={isSubmitting} onClick={handleGoogleSignUp} type="button">
                 <Icon name="google" className="mr-2 size-4 text-[#4285F4]" />
                 Continue with Google
               </SecondaryButton>

@@ -1,4 +1,9 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+
 type TopNavbarProps = {
+  userName?: string;
   mobileOpen: boolean;
   onMenuClick: () => void;
 };
@@ -32,7 +37,14 @@ function Icon({
   );
 }
 
-export function TopNavbar({ mobileOpen, onMenuClick }: TopNavbarProps) {
+export function TopNavbar({ mobileOpen, onMenuClick, userName = "merchant" }: TopNavbarProps) {
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await fetch("/api/auth/signout", { method: "POST" });
+    router.push("/login");
+  }
+
   return (
     <header className="sticky top-0 z-20 flex h-[4.5rem] items-center justify-between border-b border-white/10 bg-background/85 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
       <button
@@ -45,7 +57,7 @@ export function TopNavbar({ mobileOpen, onMenuClick }: TopNavbarProps) {
         <Icon name="menu" />
       </button>
       <div className="hidden text-sm font-medium text-muted lg:block">
-        Good morning, <span className="text-white">merchant</span>
+        Good morning, <span className="text-white">{userName}</span>
       </div>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-4">
@@ -75,12 +87,19 @@ export function TopNavbar({ mobileOpen, onMenuClick }: TopNavbarProps) {
           type="button"
         >
           <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-orange-300 text-sm font-bold text-primary-foreground">
-            M
+            {userName.charAt(0).toUpperCase()}
           </span>
           <span className="hidden text-left sm:block">
-            <span className="block text-sm font-medium text-white">Merchant</span>
+            <span className="block text-sm font-medium text-white">{userName}</span>
             <span className="block text-xs text-muted">Owner</span>
           </span>
+        </button>
+        <button
+          className="hidden rounded-lg px-2 py-1 text-xs font-medium text-muted transition hover:bg-white/10 hover:text-white sm:block"
+          onClick={handleSignOut}
+          type="button"
+        >
+          Sign out
         </button>
       </div>
     </header>
