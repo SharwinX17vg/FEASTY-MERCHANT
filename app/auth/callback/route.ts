@@ -12,9 +12,13 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/auth/auth-code-error", url.origin));
   }
 
-  const supabase = await getSupabaseServerClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) {
+  try {
+    const supabase = await getSupabaseServerClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      return NextResponse.redirect(new URL("/auth/auth-code-error", url.origin));
+    }
+  } catch {
     return NextResponse.redirect(new URL("/auth/auth-code-error", url.origin));
   }
 

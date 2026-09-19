@@ -14,7 +14,7 @@ export type OnboardingSnapshot = {
   category?: string | null;
   business?: { id: string; name?: string; category?: string } | null;
   branch?: { id: string; name?: string } | null;
-  verification?: { status: string } | null;
+  verification?: { id?: string; status: string } | null;
 };
 
 export function resolveOnboardingState(

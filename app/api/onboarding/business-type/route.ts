@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getCurrentOnboarding } from "@/lib/onboarding/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -13,6 +14,13 @@ export async function POST(request: Request) {
     const supabase = await getSupabaseServerClient();
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) return NextResponse.json({ message: "Sign in required." }, { status: 401 });
+    const current = await getCurrentOnboarding();
+    if (current && !["NOT_STARTED", "BUSINESS_TYPE_SELECTED"].includes(current.state)) {
+      return NextResponse.json(
+        { message: "Business type cannot be changed after onboarding has progressed." },
+        { status: 409 },
+      );
+    }
 
     const { data: profile, error } = await supabase
       .from("profiles")

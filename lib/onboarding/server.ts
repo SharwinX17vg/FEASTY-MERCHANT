@@ -44,7 +44,7 @@ export async function getCurrentOnboarding() {
       if (branch) {
         const { data: verification } = await supabase
           .from("verification_requests")
-          .select("status")
+          .select("id,status")
           .eq("business_id", business.id)
           .order("created_at", { ascending: false })
           .limit(1)

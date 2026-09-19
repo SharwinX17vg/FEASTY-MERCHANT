@@ -1,21 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
 
 import { PrimaryButton } from "@/components/ui";
 
 export default function Error({
-  error,
   reset,
 }: {
-  error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
-
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-16">
       <div className="max-w-lg text-center">

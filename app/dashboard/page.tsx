@@ -27,6 +27,11 @@ export default async function DashboardPage() {
   if (onboarding && onboarding.state !== ONBOARDING_STATES.COMPLETED && onboarding.state !== ONBOARDING_STATES.VERIFICATION_IN_PROGRESS) {
     redirect(getOnboardingRoute(onboarding.state));
   }
+  const isVerified = onboarding?.state === ONBOARDING_STATES.COMPLETED;
+  const canContinueProfile =
+    !onboarding ||
+    (onboarding.state !== ONBOARDING_STATES.VERIFICATION_IN_PROGRESS &&
+      onboarding.state !== ONBOARDING_STATES.COMPLETED);
 
   let userName = "merchant";
   try {
@@ -47,12 +52,17 @@ export default async function DashboardPage() {
               <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white sm:text-4xl">{userName}</h1>
               <p className="mt-2 text-sm text-muted">Here&apos;s what&apos;s happening with your business today.</p>
             </div>
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-300">
-              <span className="size-2 rounded-full bg-amber-300" /> Pending verification
+            <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium ${
+              isVerified
+                ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                : "border-amber-400/20 bg-amber-400/10 text-amber-300"
+            }`}>
+              <span className={`size-2 rounded-full ${isVerified ? "bg-emerald-300" : "bg-amber-300"}`} />
+              {isVerified ? "Verified" : "Pending verification"}
             </span>
           </section>
 
-          <Card className="mt-8 overflow-hidden border-primary/20 bg-gradient-to-r from-primary/15 via-white/[0.04] to-transparent p-5 sm:p-6">
+          {canContinueProfile ? <Card className="mt-8 overflow-hidden border-primary/20 bg-gradient-to-r from-primary/15 via-white/[0.04] to-transparent p-5 sm:p-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex items-center gap-3">
@@ -65,7 +75,7 @@ export default async function DashboardPage() {
                 <PrimaryButton className="shrink-0">Complete Profile <DashboardIcon name="arrow" className="ml-2 size-4" /></PrimaryButton>
               </a>
             </div>
-          </Card>
+          </Card> : null}
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard accent="bg-primary/15 text-primary" icon="offer" label="Active Offers" value="—" change="No data yet" />
@@ -85,7 +95,7 @@ export default async function DashboardPage() {
 
           <div className="mt-8 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
             <Card className="p-5 sm:p-6">
-              <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Recent activity</h2><button className="text-xs font-medium text-primary hover:text-accent" type="button">View all</button></div>
+              <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Recent activity</h2><span className="text-xs text-muted">Latest updates</span></div>
               <div className="mt-6 space-y-5">
                 {activities.length === 0 ? (
                   <EmptyState
