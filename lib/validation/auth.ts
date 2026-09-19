@@ -37,7 +37,12 @@ export function normalizePhone(value: unknown, country: CountryCode) {
     return { error: "Enter a valid phone number for the selected country." };
   }
 
-  return { e164: parsePhoneNumber(input, country).number };
+  const parsedPhone = parsePhoneNumber(input, country);
+  if (parsedPhone.country !== country) {
+    return { error: "Enter a valid phone number for the selected country." };
+  }
+
+  return { e164: parsedPhone.number };
 }
 
 export function validateSignupInput(input: Record<string, unknown>) {
