@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type TopNavbarProps = {
@@ -81,10 +82,10 @@ export function TopNavbar({ mobileOpen, onMenuClick, userName = "merchant" }: To
           <Icon name="bell" />
           <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />
         </button>
-        <button
+        <Link
           aria-label="Open merchant profile"
+          href="/dashboard/profile"
           className="flex items-center gap-2 rounded-xl p-1.5 transition hover:bg-white/10"
-          type="button"
         >
           <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-orange-300 text-sm font-bold text-primary-foreground">
             {userName.charAt(0).toUpperCase()}
@@ -93,7 +94,7 @@ export function TopNavbar({ mobileOpen, onMenuClick, userName = "merchant" }: To
             <span className="block text-sm font-medium text-white">{userName}</span>
             <span className="block text-xs text-muted">Owner</span>
           </span>
-        </button>
+        </Link>
         <button
           className="hidden rounded-lg px-2 py-1 text-xs font-medium text-muted transition hover:bg-white/10 hover:text-white sm:block"
           onClick={handleSignOut}

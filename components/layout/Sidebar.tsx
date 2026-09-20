@@ -121,7 +121,7 @@ export function Sidebar({
                     ? "bg-primary/15 font-semibold text-primary"
                     : "text-muted hover:bg-white/[0.06] hover:text-white"
                 }`}
-                href={isActive ? "/dashboard" : "#"}
+                href={item.label === "Businesses" ? "/dashboard/profile" : isActive ? "/dashboard" : "#"}
                 aria-current={isActive ? "page" : undefined}
                 key={item.label}
                 onClick={onClose}
@@ -141,12 +141,13 @@ export function Sidebar({
           <p className="mt-1 text-xs leading-5 text-muted">
             Keep your business information fresh for FEASTYMAP customers.
           </p>
-          <button
+          <Link
+            href="/dashboard/profile"
             className="mt-4 text-xs font-semibold text-primary transition hover:text-accent"
-            type="button"
+            onClick={onClose}
           >
             View your profile →
-          </button>
+          </Link>
         </div>
       </aside>
     </>
