@@ -13,6 +13,7 @@ type IconName =
   | "calendar"
   | "dashboard"
   | "menu"
+  | "clock"
   | "offer"
   | "review"
   | "settings"
@@ -23,6 +24,7 @@ const navigationItems: Array<{ label: string; icon: IconName }> = [
   { label: "Dashboard", icon: "dashboard" },
   { label: "Businesses", icon: "shop" },
   { label: "Branches", icon: "branch" },
+  { label: "Hours", icon: "clock" },
   { label: "Menu", icon: "menu" },
   { label: "Today's Special", icon: "star" },
   { label: "Offers", icon: "offer" },
@@ -38,6 +40,7 @@ function NavigationIcon({ name }: { name: IconName }) {
     analytics: "M4 19V5m0 14h16M8 16v-4m4 4V8m4 8v-7",
     bell: "M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4",
     branch: "M6 20V6m0 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 7h12m0 0V6m0 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 7H6",
+    clock: "M12 7v5l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
     calendar: "M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13H4V6a1 1 0 0 1 1-1Z",
     dashboard: "M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z",
     menu: "M4 6h16M4 12h16M4 18h16",
@@ -121,7 +124,7 @@ export function Sidebar({
                     ? "bg-primary/15 font-semibold text-primary"
                     : "text-muted hover:bg-white/[0.06] hover:text-white"
                 }`}
-                href={item.label === "Businesses" ? "/dashboard/profile" : item.label === "Branches" ? "/dashboard/branches" : isActive ? "/dashboard" : "#"}
+                href={item.label === "Businesses" ? "/dashboard/profile" : item.label === "Branches" ? "/dashboard/branches" : item.label === "Hours" ? "/dashboard/hours" : isActive ? "/dashboard" : "#"}
                 aria-current={isActive ? "page" : undefined}
                 key={item.label}
                 onClick={onClose}
