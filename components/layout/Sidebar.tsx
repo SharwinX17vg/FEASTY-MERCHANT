@@ -121,7 +121,7 @@ export function Sidebar({
                     ? "bg-primary/15 font-semibold text-primary"
                     : "text-muted hover:bg-white/[0.06] hover:text-white"
                 }`}
-                href={item.label === "Businesses" ? "/dashboard/profile" : isActive ? "/dashboard" : "#"}
+                href={item.label === "Businesses" ? "/dashboard/profile" : item.label === "Branches" ? "/dashboard/branches" : isActive ? "/dashboard" : "#"}
                 aria-current={isActive ? "page" : undefined}
                 key={item.label}
                 onClick={onClose}
