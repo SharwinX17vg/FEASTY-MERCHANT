@@ -124,7 +124,7 @@ export function Sidebar({
                     ? "bg-primary/15 font-semibold text-primary"
                     : "text-muted hover:bg-white/[0.06] hover:text-white"
                 }`}
-                href={item.label === "Businesses" ? "/dashboard/profile" : item.label === "Branches" ? "/dashboard/branches" : item.label === "Hours" ? "/dashboard/hours" : isActive ? "/dashboard" : "#"}
+                href={item.label === "Businesses" ? "/dashboard/profile" : item.label === "Branches" ? "/dashboard/branches" : item.label === "Hours" ? "/dashboard/hours" : item.label === "Menu" ? "/dashboard/menu" : isActive ? "/dashboard" : "#"}
                 aria-current={isActive ? "page" : undefined}
                 key={item.label}
                 onClick={onClose}
