@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { InvalidJsonBodyError, readJsonObject } from "@/lib/http/request";
+import { mutationErrorResponse } from "@/lib/supabase/errors";
 import {
   validateBusinessProfile,
   type BusinessProfileInput,
@@ -62,7 +64,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ message: result.error }, { status: result.status });
     }
 
-    const input = (await request.json()) as BusinessProfileInput;
+    const input = (await readJsonObject(request)) as BusinessProfileInput;
     const unexpectedField = Object.keys(input).find(
       (field) => !editableBusinessFields.includes(field as (typeof editableBusinessFields)[number]),
     );
@@ -83,11 +85,17 @@ export async function PUT(request: Request) {
       .select("id,organization_id,code,name,category,description,email,phone,website_url,status,created_at,updated_at")
       .single();
     if (error || !business) {
-      return NextResponse.json({ message: "Unable to save the business profile." }, { status: 403 });
+      const response = error
+        ? mutationErrorResponse(error, "Unable to save the business profile.")
+        : { message: "Unable to save the business profile.", status: 503 };
+      return NextResponse.json({ message: response.message }, { status: response.status });
     }
 
     return NextResponse.json({ business, message: "Business profile saved." });
-  } catch {
+  } catch (error) {
+    if (error instanceof InvalidJsonBodyError) {
+      return NextResponse.json({ message: error.message }, { status: 400 });
+    }
     return NextResponse.json({ message: "Unable to save the business profile." }, { status: 503 });
   }
 }

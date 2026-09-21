@@ -6,6 +6,8 @@ import {
   getAuthorizedWorkspace,
 } from "@/app/api/branches/route";
 import { validateBranch, type BranchInput } from "@/lib/validation/branch";
+import { InvalidJsonBodyError, readJsonObject } from "@/lib/http/request";
+import { mutationErrorResponse } from "@/lib/supabase/errors";
 
 type RouteContext = { params: Promise<{ branchId: string }> };
 const managerRoles = new Set(["org_owner", "admin", "moderator", "branch_manager"]);
@@ -35,7 +37,7 @@ export async function PUT(request: Request, context: RouteContext) {
       return NextResponse.json({ message: "You do not have permission to edit branches." }, { status: 403 });
     }
 
-    const input = (await request.json()) as BranchInput;
+    const input = (await readJsonObject(request)) as BranchInput;
     if (Object.keys(input).some((field) => !branchFields.includes(field as (typeof branchFields)[number]))) {
       return NextResponse.json({ message: "This branch field cannot be changed." }, { status: 400 });
     }
@@ -50,9 +52,13 @@ export async function PUT(request: Request, context: RouteContext) {
       .eq("business_id", result.businessId)
       .select(branchSelect)
       .single();
-    if (error || !branch) return NextResponse.json({ message: "Unable to save the branch." }, { status: 403 });
+    if (error || !branch) {
+      const response = error ? mutationErrorResponse(error, "Unable to save the branch.") : { message: "Unable to save the branch.", status: 503 };
+      return NextResponse.json({ message: response.message }, { status: response.status });
+    }
     return NextResponse.json({ branch, message: "Branch changes saved." });
-  } catch {
+  } catch (error) {
+    if (error instanceof InvalidJsonBodyError) return NextResponse.json({ message: error.message }, { status: 400 });
     return NextResponse.json({ message: "Unable to save the branch." }, { status: 503 });
   }
 }
@@ -67,7 +73,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (!managerRoles.has(result.role ?? "")) {
       return NextResponse.json({ message: "You do not have permission to change branch status." }, { status: 403 });
     }
-    const input = (await request.json()) as { status?: unknown };
+    const input = await readJsonObject(request);
     if (!["active", "inactive", "archived"].includes(String(input.status))) {
       return NextResponse.json({ message: "Choose a valid branch status." }, { status: 400 });
     }
@@ -78,9 +84,13 @@ export async function PATCH(request: Request, context: RouteContext) {
       .eq("business_id", result.businessId)
       .select(branchSelect)
       .single();
-    if (error || !branch) return NextResponse.json({ message: "Unable to update branch status." }, { status: 403 });
+    if (error || !branch) {
+      const response = error ? mutationErrorResponse(error, "Unable to update branch status.") : { message: "Unable to update branch status.", status: 503 };
+      return NextResponse.json({ message: response.message }, { status: response.status });
+    }
     return NextResponse.json({ branch, message: `Branch marked ${input.status}.` });
-  } catch {
+  } catch (error) {
+    if (error instanceof InvalidJsonBodyError) return NextResponse.json({ message: error.message }, { status: 400 });
     return NextResponse.json({ message: "Unable to update branch status." }, { status: 503 });
   }
 }

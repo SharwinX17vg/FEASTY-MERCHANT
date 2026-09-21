@@ -57,18 +57,33 @@ export default function MenuPage() {
   }, []);
 
   useEffect(() => {
-    if (!branchId) return;
+    if (!branchId) {
+      void Promise.resolve().then(() => setItems([]));
+      return;
+    }
+    const controller = new AbortController();
     void Promise.resolve().then(() => {
+      setItems([]);
+      setEditingId(null);
+      setValues(emptyItem);
+      setErrors({});
       setLoadingItems(true);
-      return fetch(`/api/branches/${branchId}/menu-items`)
+      setError("");
+      return fetch(`/api/branches/${branchId}/menu-items`, { signal: controller.signal });
+    })
         .then(async (response) => {
           const result = (await response.json()) as { items?: MenuItem[]; message?: string };
           if (!response.ok) throw new Error(result.message ?? "Unable to load menu items.");
-          setItems(result.items ?? []);
+          if (!controller.signal.aborted) setItems(result.items ?? []);
         })
-        .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Unable to load menu items."))
-        .finally(() => setLoadingItems(false));
-    });
+        .catch((loadError) => {
+          if (loadError instanceof DOMException && loadError.name === "AbortError") return;
+          setError(loadError instanceof Error ? loadError.message : "Unable to load menu items.");
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setLoadingItems(false);
+        });
+    return () => controller.abort();
   }, [branchId]);
 
   useEffect(() => {

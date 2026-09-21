@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { InvalidJsonBodyError, readJsonObject } from "@/lib/http/request";
+import { mutationErrorResponse } from "@/lib/supabase/errors";
 import {
   validateBranch,
   type BranchInput,
@@ -97,7 +99,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "You do not have permission to add branches." }, { status: 403 });
     }
 
-    const input = (await request.json()) as BranchInput;
+    const input = (await readJsonObject(request)) as BranchInput;
     if (hasUnexpectedFields(input as Record<string, unknown>)) {
       return NextResponse.json({ message: "This branch field cannot be changed." }, { status: 400 });
     }
@@ -112,11 +114,17 @@ export async function POST(request: Request) {
       .select(branchSelect)
       .single();
     if (error || !branch) {
-      return NextResponse.json({ message: "Unable to save the branch." }, { status: 403 });
+      const response = error
+        ? mutationErrorResponse(error, "Unable to save the branch.")
+        : { message: "Unable to save the branch.", status: 503 };
+      return NextResponse.json({ message: response.message }, { status: response.status });
     }
 
     return NextResponse.json({ branch, message: "Branch added successfully." }, { status: 201 });
-  } catch {
+  } catch (error) {
+    if (error instanceof InvalidJsonBodyError) {
+      return NextResponse.json({ message: error.message }, { status: 400 });
+    }
     return NextResponse.json({ message: "Unable to save the branch." }, { status: 503 });
   }
 }

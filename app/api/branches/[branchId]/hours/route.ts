@@ -6,6 +6,8 @@ import {
   validateBusinessHours,
   type BusinessHoursInput,
 } from "@/lib/validation/business-hours";
+import { InvalidJsonBodyError, readJsonObject } from "@/lib/http/request";
+import { mutationErrorResponse } from "@/lib/supabase/errors";
 
 type RouteContext = { params: Promise<{ branchId: string }> };
 const managerRoles = new Set(["org_owner", "admin", "moderator", "branch_manager"]);
@@ -71,7 +73,7 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    const input = (await request.json()) as { hours?: unknown };
+    const input = await readJsonObject(request);
     if (!isBusinessHoursInput(input.hours)) {
       return NextResponse.json({ message: "Provide a valid weekly schedule." }, { status: 400 });
     }
@@ -91,7 +93,8 @@ export async function PUT(request: Request, context: RouteContext) {
       .select("id,name,opening_hours,status")
       .single();
     if (error || !branch) {
-      return NextResponse.json({ message: "Unable to save branch hours." }, { status: 403 });
+      const response = error ? mutationErrorResponse(error, "Unable to save branch hours.") : { message: "Unable to save branch hours.", status: 503 };
+      return NextResponse.json({ message: response.message }, { status: response.status });
     }
 
     return NextResponse.json({
@@ -99,7 +102,8 @@ export async function PUT(request: Request, context: RouteContext) {
       hours: branch.opening_hours,
       message: "Business hours saved.",
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof InvalidJsonBodyError) return NextResponse.json({ message: error.message }, { status: 400 });
     return NextResponse.json({ message: "Unable to save branch hours." }, { status: 503 });
   }
 }

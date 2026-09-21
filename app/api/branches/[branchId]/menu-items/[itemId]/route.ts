@@ -7,6 +7,8 @@ import {
   menuItemSelect,
 } from "@/app/api/branches/[branchId]/menu-items/route";
 import { validateMenuItem, type MenuItemInput } from "@/lib/validation/menu-item";
+import { InvalidJsonBodyError, readJsonObject } from "@/lib/http/request";
+import { mutationErrorResponse } from "@/lib/supabase/errors";
 
 type RouteContext = { params: Promise<{ branchId: string; itemId: string }> };
 
@@ -32,7 +34,7 @@ export async function PUT(request: Request, context: RouteContext) {
     if (!managerRoles.has(result.role ?? "")) {
       return NextResponse.json({ message: "You do not have permission to edit menu items." }, { status: 403 });
     }
-    const input = (await request.json()) as MenuItemInput;
+    const input = (await readJsonObject(request)) as MenuItemInput;
     if (hasUnexpectedFields(input as Record<string, unknown>)) {
       return NextResponse.json({ message: "This menu field cannot be changed." }, { status: 400 });
     }
@@ -47,9 +49,13 @@ export async function PUT(request: Request, context: RouteContext) {
       .eq("branch_id", branchId)
       .select(menuItemSelect)
       .single();
-    if (error || !item) return NextResponse.json({ message: "Unable to save the menu item." }, { status: 403 });
+    if (error || !item) {
+      const response = error ? mutationErrorResponse(error, "Unable to save the menu item.") : { message: "Unable to save the menu item.", status: 503 };
+      return NextResponse.json({ message: response.message }, { status: response.status });
+    }
     return NextResponse.json({ item, message: "Menu item changes saved." });
-  } catch {
+  } catch (error) {
+    if (error instanceof InvalidJsonBodyError) return NextResponse.json({ message: error.message }, { status: 400 });
     return NextResponse.json({ message: "Unable to save the menu item." }, { status: 503 });
   }
 }
@@ -62,7 +68,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (!managerRoles.has(result.role ?? "")) {
       return NextResponse.json({ message: "You do not have permission to change menu item status." }, { status: 403 });
     }
-    const input = (await request.json()) as { is_available?: unknown; status?: unknown };
+    const input = await readJsonObject(request);
     const changes: { is_available?: boolean; status?: "active" | "archived" } = {};
     if (typeof input.is_available === "boolean") changes.is_available = input.is_available;
     if (input.status === "active" || input.status === "archived") changes.status = input.status;
@@ -76,9 +82,13 @@ export async function PATCH(request: Request, context: RouteContext) {
       .eq("branch_id", branchId)
       .select(menuItemSelect)
       .single();
-    if (error || !item) return NextResponse.json({ message: "Unable to update menu item status." }, { status: 403 });
+    if (error || !item) {
+      const response = error ? mutationErrorResponse(error, "Unable to update menu item status.") : { message: "Unable to update menu item status.", status: 503 };
+      return NextResponse.json({ message: response.message }, { status: response.status });
+    }
     return NextResponse.json({ item, message: "Menu item status updated." });
-  } catch {
+  } catch (error) {
+    if (error instanceof InvalidJsonBodyError) return NextResponse.json({ message: error.message }, { status: 400 });
     return NextResponse.json({ message: "Unable to update menu item status." }, { status: 503 });
   }
 }

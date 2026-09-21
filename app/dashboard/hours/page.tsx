@@ -76,21 +76,32 @@ export default function HoursPage() {
   }, []);
 
   useEffect(() => {
-    if (!branchId) return;
+    if (!branchId) {
+      void Promise.resolve().then(() => setHours(createDefaultBusinessHours()));
+      return;
+    }
+    const controller = new AbortController();
     void Promise.resolve().then(() => {
+      setHours(createDefaultBusinessHours());
+      setEditing(false);
+      setErrors({});
       setLoadingHours(true);
       setError("");
-      return fetch(`/api/branches/${branchId}/hours`)
+      return fetch(`/api/branches/${branchId}/hours`, { signal: controller.signal });
+    })
         .then(async (response) => {
           const result = (await response.json()) as { hours?: unknown; message?: string };
           if (!response.ok) throw new Error(result.message ?? "Unable to load business hours.");
-          setHours(normalizeHours(result.hours));
+          if (!controller.signal.aborted) setHours(normalizeHours(result.hours));
         })
         .catch((loadError) => {
+          if (loadError instanceof DOMException && loadError.name === "AbortError") return;
           setError(loadError instanceof Error ? loadError.message : "Unable to load business hours.");
         })
-        .finally(() => setLoadingHours(false));
-    });
+        .finally(() => {
+          if (!controller.signal.aborted) setLoadingHours(false);
+        });
+    return () => controller.abort();
   }, [branchId]);
 
   useEffect(() => {
