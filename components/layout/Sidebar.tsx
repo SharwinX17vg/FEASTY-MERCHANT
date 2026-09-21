@@ -22,7 +22,7 @@ type IconName =
 
 const navigationItems: Array<{ label: string; icon: IconName }> = [
   { label: "Dashboard", icon: "dashboard" },
-  { label: "Businesses", icon: "shop" },
+  { label: "Profile", icon: "shop" },
   { label: "Branches", icon: "branch" },
   { label: "Hours", icon: "clock" },
   { label: "Menu", icon: "menu" },
@@ -124,7 +124,7 @@ export function Sidebar({
                     ? "bg-primary/15 font-semibold text-primary"
                     : "text-muted hover:bg-white/[0.06] hover:text-white"
                 }`}
-                href={item.label === "Businesses" ? "/dashboard/profile" : item.label === "Branches" ? "/dashboard/branches" : item.label === "Hours" ? "/dashboard/hours" : item.label === "Menu" ? "/dashboard/menu" : isActive ? "/dashboard" : "#"}
+                href={item.label === "Profile" ? "/dashboard/profile" : item.label === "Branches" ? "/dashboard/branches" : item.label === "Hours" ? "/dashboard/hours" : item.label === "Menu" ? "/dashboard/menu" : isActive ? "/dashboard" : "#"}
                 aria-current={isActive ? "page" : undefined}
                 key={item.label}
                 onClick={onClose}
