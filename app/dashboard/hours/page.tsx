@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { DashboardNotice } from "@/components/dashboard/DashboardNotice";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Card, PrimaryButton, SecondaryButton } from "@/components/ui";
 import {
   createDefaultBusinessHours,
@@ -162,17 +164,15 @@ export default function HoursPage() {
     <DashboardLayout activeItem="Branches">
       <div className="min-h-screen bg-background">
         <div className="mx-auto max-w-4xl px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-            <div>
-              <p className="text-sm text-muted">Branch operations</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Business hours</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">Set the weekly opening schedule customers see for each branch.</p>
-            </div>
-            {branchId && !editing ? <PrimaryButton onClick={() => { setMessage(""); setError(""); setEditing(true); }}>Edit hours</PrimaryButton> : null}
-          </div>
+          <DashboardPageHeader
+            action={branchId && !editing ? <PrimaryButton onClick={() => { setMessage(""); setError(""); setEditing(true); }}>Edit hours</PrimaryButton> : undefined}
+            description="Set the weekly opening schedule customers see for each branch."
+            eyebrow="Branch operations"
+            title="Business hours"
+          />
 
-          {error ? <p className="mt-8 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200" role="alert">{error}</p> : null}
-          {message ? <p className="mt-8 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200" role="status">{message}</p> : null}
+          {error ? <DashboardNotice kind="error">{error}</DashboardNotice> : null}
+          {message ? <DashboardNotice kind="success">{message}</DashboardNotice> : null}
 
           {loading ? <Card className="mt-8 p-6"><p className="text-sm text-muted" role="status">Loading branches…</p></Card> : null}
           {!loading && branches.length === 0 ? <Card className="mt-8 p-8 text-center"><h2 className="text-lg font-semibold text-white">No active branches</h2><p className="mt-2 text-sm text-muted">Add a branch before setting its operating hours.</p></Card> : null}

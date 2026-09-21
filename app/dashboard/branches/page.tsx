@@ -3,6 +3,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { DashboardNotice } from "@/components/dashboard/DashboardNotice";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Card, Input, PrimaryButton, SecondaryButton } from "@/components/ui";
 import type { BranchValues } from "@/lib/validation/branch";
 
@@ -187,17 +189,15 @@ export default function BranchesPage() {
     <DashboardLayout activeItem="Branches">
       <div className="min-h-screen bg-background">
         <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-            <div>
-              <p className="text-sm text-muted">Business workspace</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Branches</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">Manage the locations customers can find for your business.</p>
-            </div>
-            {!editingId ? <PrimaryButton onClick={startAdd}>Add branch</PrimaryButton> : null}
-          </div>
+          <DashboardPageHeader
+            action={!editingId ? <PrimaryButton onClick={startAdd}>Add branch</PrimaryButton> : undefined}
+            description="Manage the locations customers can find for your business."
+            eyebrow="Business workspace"
+            title="Branches"
+          />
 
-          {error ? <p className="mt-8 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200" role="alert">{error}</p> : null}
-          {message ? <p className="mt-8 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200" role="status">{message}</p> : null}
+          {error ? <DashboardNotice kind="error">{error}</DashboardNotice> : null}
+          {message ? <DashboardNotice kind="success">{message}</DashboardNotice> : null}
 
           {editingId ? (
             <Card className="mt-8 p-5 sm:p-7">

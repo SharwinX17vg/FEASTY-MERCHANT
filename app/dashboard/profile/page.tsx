@@ -3,6 +3,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { DashboardNotice } from "@/components/dashboard/DashboardNotice";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Card, Input, PrimaryButton, SecondaryButton } from "@/components/ui";
 import type { BusinessProfileValues } from "@/lib/validation/business-profile";
 
@@ -136,18 +138,16 @@ export default function MerchantProfilePage() {
     <DashboardLayout activeItem="Businesses">
       <div className="min-h-screen bg-background">
         <div className="mx-auto max-w-5xl px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-            <div>
-              <p className="text-sm text-muted">Business workspace</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">Business profile</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">Keep the information customers see about your business accurate and up to date.</p>
-            </div>
-            {!loading && business && !editing ? <PrimaryButton onClick={startEditing}>Edit profile</PrimaryButton> : null}
-          </div>
+          <DashboardPageHeader
+            action={!loading && business && !editing ? <PrimaryButton onClick={startEditing}>Edit profile</PrimaryButton> : undefined}
+            description="Keep the information customers see about your business accurate and up to date."
+            eyebrow="Business workspace"
+            title="Business profile"
+          />
 
           {loading ? <Card className="mt-8 p-6"><p className="text-sm text-muted" role="status">Loading your business profile…</p></Card> : null}
-          {error ? <p className="mt-8 rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200" role="alert">{error}</p> : null}
-          {message ? <p className="mt-8 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200" role="status">{message}</p> : null}
+          {error ? <DashboardNotice kind="error">{error}</DashboardNotice> : null}
+          {message ? <DashboardNotice kind="success">{message}</DashboardNotice> : null}
 
           {!loading && business ? (
             <Card className="mt-8 p-5 sm:p-7">
