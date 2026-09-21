@@ -13,8 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FEASTY MERCHANT",
-  description: "Manage your business presence on FEASTY.",
+  title: {
+    default: "FEASTY Merchant",
+    template: "%s | FEASTY Merchant",
+  },
+  description:
+    "Manage your business profile, branches, hours, and menu from one merchant workspace.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
