@@ -8,7 +8,8 @@ import {
   type BranchInput,
 } from "@/lib/validation/branch";
 
-const managerRoles = new Set(["org_owner", "admin", "moderator", "branch_manager"]);
+import { getValidatedWorkspaceContext } from "@/lib/workspace/context";
+
 const branchFields = [
   "name",
   "address_line_1",
@@ -22,42 +23,29 @@ const branchFields = [
 const branchSelect =
   "id,business_id,code,name,address_line_1,address_line_2,city,state,postal_code,country_code,phone,status,created_at,updated_at";
 
-async function getAuthorizedWorkspace() {
-  const supabase = await getSupabaseServerClient();
-  const { data: authData } = await supabase.auth.getUser();
-  if (!authData.user) return { supabase, error: "Sign in required.", status: 401 as const };
-
-  const { data: membership, error: membershipError } = await supabase
-    .from("organization_members")
-    .select("organization_id,role")
-    .eq("user_id", authData.user.id)
-    .eq("status", "active")
-    .maybeSingle();
-  if (membershipError) {
-    return { supabase, error: "Unable to verify workspace access.", status: 503 as const };
+async function getAuthorizedWorkspace(request?: Request) {
+  const result = await getValidatedWorkspaceContext({ request });
+  if ("error" in result) {
+    return {
+      supabase: await getSupabaseServerClient(),
+      error: result.error,
+      status: result.status as 401 | 403 | 404 | 503,
+    };
   }
-  if (!membership) {
-    return { supabase, error: "No active merchant workspace was found.", status: 403 as const };
-  }
-
-  const { data: business, error: businessError } = await supabase
-    .from("businesses")
-    .select("id,organization_id")
-    .eq("organization_id", membership.organization_id)
-    .maybeSingle();
-  if (businessError) {
-    return { supabase, error: "Unable to load the business workspace.", status: 503 as const };
-  }
-  if (!business) {
-    return { supabase, error: "Complete business details before managing branches.", status: 404 as const };
+  if (!result.data.businessId) {
+    return {
+      supabase: await getSupabaseServerClient(),
+      error: "Complete business details before managing branches.",
+      status: 404 as const,
+    };
   }
 
   return {
-    supabase,
-    organizationId: membership.organization_id,
-    businessId: business.id,
-    role: membership.role,
-    canManage: managerRoles.has(membership.role),
+    supabase: await getSupabaseServerClient(),
+    organizationId: result.data.organizationId,
+    businessId: result.data.businessId,
+    role: result.data.role,
+    canManage: result.data.canManageBranch,
   };
 }
 
@@ -67,9 +55,9 @@ function hasUnexpectedFields(input: Record<string, unknown>) {
   );
 }
 
-export async function GET() {
+export async function GET(request?: Request) {
   try {
-    const result = await getAuthorizedWorkspace();
+    const result = await getAuthorizedWorkspace(request);
     if ("error" in result) {
       return NextResponse.json({ message: result.error }, { status: result.status });
     }
@@ -91,7 +79,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const result = await getAuthorizedWorkspace();
+    const result = await getAuthorizedWorkspace(request);
     if ("error" in result) {
       return NextResponse.json({ message: result.error }, { status: result.status });
     }

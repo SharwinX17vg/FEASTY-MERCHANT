@@ -8,6 +8,8 @@ import {
   type BusinessProfileInput,
 } from "@/lib/validation/business-profile";
 
+import { getValidatedWorkspaceContext } from "@/lib/workspace/context";
+
 const editableBusinessFields = [
   "name",
   "category",
@@ -16,38 +18,37 @@ const editableBusinessFields = [
   "phone",
   "website_url",
 ] as const;
-const managerRoles = new Set(["org_owner", "admin", "moderator"]);
 
-async function getAuthorizedBusiness() {
-  const supabase = await getSupabaseServerClient();
-  const { data: authData } = await supabase.auth.getUser();
-  if (!authData.user) return { supabase, error: "Sign in required.", status: 401 as const };
-
-  const { data: membership, error: membershipError } = await supabase
-    .from("organization_members")
-    .select("organization_id,role")
-    .eq("user_id", authData.user.id)
-    .eq("status", "active")
-    .maybeSingle();
-  if (membershipError) return { supabase, error: "Unable to verify workspace access.", status: 503 as const };
-  if (!membership || !managerRoles.has(membership.role)) {
-    return { supabase, error: "You do not have permission to manage this business.", status: 403 as const };
+async function getAuthorizedBusiness(request?: Request) {
+  const result = await getValidatedWorkspaceContext({ request });
+  if ("error" in result) {
+    return {
+      supabase: await getSupabaseServerClient(),
+      error: result.error,
+      status: result.status as 401 | 403 | 404 | 503,
+    };
+  }
+  if (!result.data.canManageBusiness) {
+    return {
+      supabase: await getSupabaseServerClient(),
+      error: "You do not have permission to manage this business.",
+      status: 403 as const,
+    };
+  }
+  if (!result.data.business) {
+    return {
+      supabase: await getSupabaseServerClient(),
+      error: "No business profile is available for this workspace.",
+      status: 404 as const,
+    };
   }
 
-  const { data: business, error: businessError } = await supabase
-    .from("businesses")
-    .select("id,organization_id,code,name,category,description,email,phone,website_url,status,created_at,updated_at")
-    .eq("organization_id", membership.organization_id)
-    .maybeSingle();
-  if (businessError) return { supabase, error: "Unable to load the business profile.", status: 503 as const };
-  if (!business) return { supabase, error: "No business profile is available for this workspace.", status: 404 as const };
-
-  return { supabase, business };
+  return { supabase: await getSupabaseServerClient(), business: result.data.business };
 }
 
-export async function GET() {
+export async function GET(request?: Request) {
   try {
-    const result = await getAuthorizedBusiness();
+    const result = await getAuthorizedBusiness(request);
     if ("error" in result) {
       return NextResponse.json({ message: result.error }, { status: result.status });
     }
@@ -59,7 +60,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const result = await getAuthorizedBusiness();
+    const result = await getAuthorizedBusiness(request);
     if ("error" in result) {
       return NextResponse.json({ message: result.error }, { status: result.status });
     }

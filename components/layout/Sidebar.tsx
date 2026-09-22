@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WorkspaceSwitcher } from "@/components/layout/WorkspaceSwitcher";
 
 type SidebarProps = {
   activeItem?: string;
@@ -110,8 +111,11 @@ export function Sidebar({
           </button>
         </div>
 
-        <p className="px-3 pb-3 pt-10 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Workspace
+        <div className="my-3 px-1">
+          <WorkspaceSwitcher />
+        </div>
+        <p className="px-3 pb-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Workspace Navigation
         </p>
         <nav aria-label="Dashboard navigation" className="space-y-1">
           {navigationItems.map((item) => {

@@ -14,6 +14,7 @@ import {
   type BusinessHours,
   type DayOfWeek,
 } from "@/lib/validation/business-hours";
+import { getValidatedWorkspaceContext } from "@/lib/workspace/context";
 
 type Branch = {
   id: string;
@@ -80,48 +81,38 @@ function statusLabel(status: string) {
 async function loadDashboardData(): Promise<
   { data: DashboardData } | { error: string; status: number }
 > {
+  const contextResult = await getValidatedWorkspaceContext();
+  if ("error" in contextResult) {
+    return { error: contextResult.error, status: contextResult.status };
+  }
+
+  const { business, organizationId } = contextResult.data;
+  if (!business) {
+    return { error: "No business profile is available for this workspace.", status: 404 };
+  }
+
   const supabase = await getSupabaseServerClient();
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError || !authData.user) return { error: "Sign in required.", status: 401 };
-
-  const { data: membership, error: membershipError } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", authData.user.id)
-    .eq("status", "active")
-    .maybeSingle();
-  if (membershipError) return { error: "Unable to verify workspace access.", status: 503 };
-  if (!membership) return { error: "No active merchant workspace was found.", status: 403 };
-
-  const { data: business, error: businessError } = await supabase
-    .from("businesses")
-    .select("id,name,category,code,status")
-    .eq("organization_id", membership.organization_id)
-    .maybeSingle();
-  if (businessError) return { error: "Unable to load the business overview.", status: 503 };
-  if (!business) return { error: "No business profile is available for this workspace.", status: 404 };
 
   const [
     { data: branches, error: branchesError },
-    { data: verification, error: verificationError },
-  ] =
-    await Promise.all([
-      supabase
-        .from("branches")
-        .select("id,name,code,status,opening_hours")
-        .eq("business_id", business.id)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("verification_requests")
-        .select("status")
-        .eq("organization_id", membership.organization_id)
-        .eq("business_id", business.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+    { data: verifications, error: verificationError },
+  ] = await Promise.all([
+    supabase
+      .from("branches")
+      .select("id,name,code,status,opening_hours")
+      .eq("business_id", business.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("verification_requests")
+      .select("status")
+      .eq("organization_id", organizationId)
+      .eq("business_id", business.id)
+      .order("created_at", { ascending: false })
+      .limit(1),
+  ]);
   if (branchesError) return { error: "Unable to load branch information.", status: 503 };
 
+  const verification = verifications?.[0] ?? null;
   const availableBranches = (branches ?? []) as Branch[];
   const activeBranch = availableBranches.find((branch) => branch.status === "active") ?? null;
   if (!activeBranch) {
@@ -158,7 +149,8 @@ async function loadDashboardData(): Promise<
     menuError || hoursError || verificationError
       ? "Some dashboard details could not be loaded. Refresh to try again."
       : null;
-  const activeItems = (menuItems ?? []).filter((item) => item.status === "active");
+  type MenuItemRow = { is_available: boolean; status: string };
+  const activeItems = (menuItems ?? []).filter((item: MenuItemRow) => item.status === "active");
 
   return {
     data: {
@@ -171,8 +163,8 @@ async function loadDashboardData(): Promise<
         ? null
         : {
             total: activeItems.length,
-            available: activeItems.filter((item) => item.is_available).length,
-            unavailable: activeItems.filter((item) => !item.is_available).length,
+            available: activeItems.filter((item: MenuItemRow) => item.is_available).length,
+            unavailable: activeItems.filter((item: MenuItemRow) => !item.is_available).length,
           },
       detailError,
     },
