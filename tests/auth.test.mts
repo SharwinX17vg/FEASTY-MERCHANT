@@ -101,6 +101,15 @@ test("onboarding state resolver handles every persisted progress state", () => {
   );
 });
 
+test("onboarding state resolver recognizes organization owner membership with business creation", () => {
+  assert.equal(
+    resolveOnboardingState({
+      business: { id: "biz-123", name: "Feasty Cafe", category: "Restaurant" },
+    }),
+    ONBOARDING_STATES.BUSINESS_CREATED,
+  );
+});
+
 test("onboarding routes and state validation reject unknown states", () => {
   assert.equal(getOnboardingRoute(ONBOARDING_STATES.BUSINESS_CREATED), "/register/branch");
   assert.equal(getOnboardingRoute(ONBOARDING_STATES.COMPLETED), "/dashboard");

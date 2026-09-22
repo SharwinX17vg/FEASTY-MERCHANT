@@ -38,13 +38,6 @@ export async function POST(request: Request) {
         .single();
       if (organization.error) return NextResponse.json({ message: "Unable to create your organization." }, { status: 400 });
       organizationId = organization.data.id;
-      const member = await supabase.from("organization_members").insert({
-        organization_id: organizationId,
-        user_id: authData.user.id,
-        role: "org_owner",
-        joined_at: new Date().toISOString(),
-      });
-      if (member.error) return NextResponse.json({ message: "Unable to save organization membership." }, { status: 400 });
     }
 
     const existing = await supabase.from("businesses").select("id").eq("organization_id", organizationId).maybeSingle();
