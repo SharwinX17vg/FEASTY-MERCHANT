@@ -12,7 +12,7 @@ import { mutationErrorResponse } from "@/lib/supabase/errors";
 
 type RouteContext = { params: Promise<{ branchId: string; itemId: string }> };
 
-async function getScopedItem(branchId: string, itemId: string) {
+export async function getScopedItem(branchId: string, itemId: string) {
   const result = await getScopedBranch(branchId);
   if ("error" in result) return result;
   const { data: item, error } = await result.supabase
