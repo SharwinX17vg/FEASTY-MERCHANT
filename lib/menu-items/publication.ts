@@ -41,3 +41,22 @@ export function getMenuItemApprovalUpdate(
     publication_status: "approved" as const,
   };
 }
+
+export function canPublishMenuItem(
+  role: string | null | undefined,
+  publicationStatus: string | null | undefined,
+) {
+  return menuReviewRoles.has(role ?? "") && publicationStatus === "approved";
+}
+
+export function getMenuItemPublicationUpdate(
+  publicationStatus: string | null | undefined,
+  publishedAt: string,
+) {
+  if (publicationStatus !== "approved") return null;
+
+  return {
+    publication_status: "published" as const,
+    published_at: publishedAt,
+  };
+}
