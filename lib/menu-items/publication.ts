@@ -5,6 +5,18 @@ const merchantManagerRoles = new Set([
   "branch_manager",
 ]);
 const menuReviewRoles = new Set(["admin", "moderator"]);
+const publicationStatusLabels = {
+  draft: "Draft",
+  pending_review: "Pending Review",
+  approved: "Approved",
+  published: "Published",
+} as const;
+
+export type MenuPublicationStatus = keyof typeof publicationStatusLabels;
+
+export function getMenuItemPublicationLabel(status: string | null | undefined) {
+  return publicationStatusLabels[status as MenuPublicationStatus] ?? "Draft";
+}
 
 export function canSubmitMenuItem(
   role: string | null | undefined,

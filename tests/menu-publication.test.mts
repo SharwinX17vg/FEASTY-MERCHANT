@@ -6,6 +6,7 @@ import {
   canPublishMenuItem,
   canSubmitMenuItem,
   getMenuItemApprovalUpdate,
+  getMenuItemPublicationLabel,
   getMenuItemPublicationUpdate,
   getMenuItemSubmissionUpdate,
 } from "../lib/menu-items/publication.ts";
@@ -76,4 +77,11 @@ test("only approved menu items receive a published transition", () => {
   assert.equal(getMenuItemPublicationUpdate("draft", publishedAt), null);
   assert.equal(getMenuItemPublicationUpdate("pending_review", publishedAt), null);
   assert.equal(getMenuItemPublicationUpdate("published", publishedAt), null);
+});
+
+test("formats supported publication statuses for the menu badge", () => {
+  assert.equal(getMenuItemPublicationLabel("draft"), "Draft");
+  assert.equal(getMenuItemPublicationLabel("pending_review"), "Pending Review");
+  assert.equal(getMenuItemPublicationLabel("approved"), "Approved");
+  assert.equal(getMenuItemPublicationLabel("published"), "Published");
 });

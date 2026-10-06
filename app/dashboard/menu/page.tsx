@@ -6,6 +6,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardNotice } from "@/components/dashboard/DashboardNotice";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Card, Input, PrimaryButton, SecondaryButton } from "@/components/ui";
+import { getMenuItemPublicationLabel, type MenuPublicationStatus } from "@/lib/menu-items/publication";
 import type { MenuItemValues } from "@/lib/validation/menu-item";
 
 type Branch = { id: string; name: string; status: string };
@@ -13,6 +14,7 @@ type MenuItem = MenuItemValues & {
   id: string;
   branch_id: string;
   code: string;
+  publication_status: MenuPublicationStatus;
   status: "active" | "archived";
 };
 type FieldErrors = Partial<Record<keyof MenuItemValues, string>>;
@@ -239,7 +241,7 @@ export default function MenuPage() {
               ) : null}
               {!editingId && loadingItems ? <Card className="mt-5 p-6"><p className="text-sm text-muted" role="status">Loading menu items…</p></Card> : null}
               {!editingId && !loadingItems && items.filter((item) => item.status !== "archived").length === 0 ? <Card className="mt-5 p-8 text-center"><h2 className="text-lg font-semibold text-white">No menu items yet</h2><p className="mt-2 text-sm text-muted">Add your first item to start building this branch&apos;s menu.</p><PrimaryButton className="mt-5" onClick={startAdd}>Add your first item</PrimaryButton></Card> : null}
-              {!editingId && !loadingItems && items.filter((item) => item.status !== "archived").length > 0 ? <div className="mt-5 grid gap-5 lg:grid-cols-2">{items.filter((item) => item.status !== "archived").map((item) => <Card className="p-5 sm:p-6" key={item.id}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">{item.category || "Menu item"}</p><h2 className="mt-2 text-xl font-semibold text-white">{item.name}</h2></div><span className={`rounded-full border px-3 py-1.5 text-xs font-medium ${item.is_available ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300" : "border-amber-400/20 bg-amber-400/10 text-amber-300"}`}>{item.is_available ? "Available" : "Unavailable"}</span></div><p className="mt-4 min-h-6 text-sm leading-6 text-muted">{item.description || "No description provided."}</p><p className="mt-5 text-lg font-semibold text-white">{currency(Number(item.price))}</p><div className="mt-5 flex flex-wrap gap-3"><SecondaryButton onClick={() => startEdit(item)}>Edit</SecondaryButton>              <SecondaryButton disabled={statusUpdatingId === item.id} onClick={() => updateStatus(item, { is_available: !item.is_available })}>{statusUpdatingId === item.id ? "Saving…" : item.is_available ? "Mark unavailable" : "Mark available"}</SecondaryButton><SecondaryButton disabled={statusUpdatingId === item.id} onClick={() => updateStatus(item, { status: "archived" })}>Archive</SecondaryButton></div></Card>)}</div> : null}
+              {!editingId && !loadingItems && items.filter((item) => item.status !== "archived").length > 0 ? <div className="mt-5 grid gap-5 lg:grid-cols-2">{items.filter((item) => item.status !== "archived").map((item) => <Card className="p-5 sm:p-6" key={item.id}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">{item.category || "Menu item"}</p><h2 className="mt-2 text-xl font-semibold text-white">{item.name}</h2></div><div className="flex flex-wrap justify-end gap-2"><span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">{getMenuItemPublicationLabel(item.publication_status)}</span><span className={`rounded-full border px-3 py-1.5 text-xs font-medium ${item.is_available ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300" : "border-amber-400/20 bg-amber-400/10 text-amber-300"}`}>{item.is_available ? "Available" : "Unavailable"}</span></div></div><p className="mt-4 min-h-6 text-sm leading-6 text-muted">{item.description || "No description provided."}</p><p className="mt-5 text-lg font-semibold text-white">{currency(Number(item.price))}</p><div className="mt-5 flex flex-wrap gap-3"><SecondaryButton onClick={() => startEdit(item)}>Edit</SecondaryButton>              <SecondaryButton disabled={statusUpdatingId === item.id} onClick={() => updateStatus(item, { is_available: !item.is_available })}>{statusUpdatingId === item.id ? "Saving…" : item.is_available ? "Mark unavailable" : "Mark available"}</SecondaryButton><SecondaryButton disabled={statusUpdatingId === item.id} onClick={() => updateStatus(item, { status: "archived" })}>Archive</SecondaryButton></div></Card>)}</div> : null}
             </>
           ) : null}
         </div>
