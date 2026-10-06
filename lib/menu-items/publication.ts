@@ -4,6 +4,7 @@ const merchantManagerRoles = new Set([
   "moderator",
   "branch_manager",
 ]);
+const menuReviewRoles = new Set(["admin", "moderator"]);
 
 export function canSubmitMenuItem(
   role: string | null | undefined,
@@ -21,5 +22,22 @@ export function getMenuItemSubmissionUpdate(
   return {
     publication_status: "pending_review" as const,
     submitted_at: submittedAt,
+  };
+}
+
+export function canApproveMenuItem(
+  role: string | null | undefined,
+  publicationStatus: string | null | undefined,
+) {
+  return menuReviewRoles.has(role ?? "") && publicationStatus === "pending_review";
+}
+
+export function getMenuItemApprovalUpdate(
+  publicationStatus: string | null | undefined,
+) {
+  if (publicationStatus !== "pending_review") return null;
+
+  return {
+    publication_status: "approved" as const,
   };
 }
