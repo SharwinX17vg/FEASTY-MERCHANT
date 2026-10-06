@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   canApproveMenuItem,
   canPublishMenuItem,
+  canReviewMenuItems,
   canSubmitMenuItem,
   getMenuItemApprovalUpdate,
   getMenuItemPublicationLabel,
@@ -43,6 +44,13 @@ test("only admin and moderator roles can approve pending menu items", () => {
   for (const role of ["org_owner", "branch_manager", "staff", undefined]) {
     assert.equal(canApproveMenuItem(role, "pending_review"), false);
   }
+});
+
+test("only admin and moderator roles can access menu review", () => {
+  assert.equal(canReviewMenuItems("admin"), true);
+  assert.equal(canReviewMenuItems("moderator"), true);
+  assert.equal(canReviewMenuItems("org_owner"), false);
+  assert.equal(canReviewMenuItems("branch_manager"), false);
 });
 
 test("only pending review menu items receive an approved transition", () => {

@@ -1,12 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DashboardNotice } from "@/components/dashboard/DashboardNotice";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { Card, Input, PrimaryButton, SecondaryButton } from "@/components/ui";
-import { getMenuItemPublicationLabel, type MenuPublicationStatus } from "@/lib/menu-items/publication";
+import {
+  canReviewMenuItems,
+  getMenuItemPublicationLabel,
+  type MenuPublicationStatus,
+} from "@/lib/menu-items/publication";
 import type { MenuItemValues } from "@/lib/validation/menu-item";
 
 type Branch = { id: string; name: string; status: string };
@@ -43,8 +48,18 @@ export default function MenuPage() {
   const [saving, setSaving] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [workspaceRole, setWorkspaceRole] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/workspace/select")
+      .then(async (response) => {
+        const result = (await response.json()) as { role?: string };
+        if (response.ok) setWorkspaceRole(result.role ?? "");
+      })
+      .catch(() => setWorkspaceRole(""));
+  }, []);
 
   useEffect(() => {
     fetch("/api/branches")
@@ -223,7 +238,7 @@ export default function MenuPage() {
       <div className="min-h-screen bg-background">
         <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
           <DashboardPageHeader
-            action={branchId && !editingId ? <PrimaryButton onClick={startAdd}>Add menu item</PrimaryButton> : undefined}
+            action={branchId && !editingId ? <div className="flex flex-wrap gap-3">{canReviewMenuItems(workspaceRole) ? <Link className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-foreground shadow-sm shadow-black/10 transition duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/60 hover:bg-primary/10 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" href="/dashboard/menu/review">Review pending items</Link> : null}<PrimaryButton onClick={startAdd}>Add menu item</PrimaryButton></div> : undefined}
             description="Manage the items customers can discover at each branch."
             eyebrow="Branch operations"
             title="Menu"

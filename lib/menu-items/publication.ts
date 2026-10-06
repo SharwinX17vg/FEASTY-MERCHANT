@@ -14,6 +14,10 @@ const publicationStatusLabels = {
 
 export type MenuPublicationStatus = keyof typeof publicationStatusLabels;
 
+export function canReviewMenuItems(role: string | null | undefined) {
+  return menuReviewRoles.has(role ?? "");
+}
+
 export function getMenuItemPublicationLabel(status: string | null | undefined) {
   return publicationStatusLabels[status as MenuPublicationStatus] ?? "Draft";
 }

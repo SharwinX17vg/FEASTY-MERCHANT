@@ -65,6 +65,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({
+      role: result.data.role,
       organizationId: result.data.organizationId,
       businessId: result.data.businessId,
       organization: result.data.organization,
