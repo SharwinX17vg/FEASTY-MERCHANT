@@ -25,6 +25,8 @@ type ContentItem = {
   submitted_at: string | null;
   published_at: string | null;
   rejection_reason: string | null;
+  image_path: string | null;
+  image_url: string | null;
   created_at: string;
 };
 
@@ -55,6 +57,7 @@ export default function ContentPage() {
   const [contentType, setContentType] = useState<ContentType>("post");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [image, setImage] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
@@ -63,6 +66,8 @@ export default function ContentPage() {
   const [editType, setEditType] = useState<ContentType>("post");
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
+  const [editImage, setEditImage] = useState<File | null>(null);
+  const [removeEditImage, setRemoveEditImage] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -100,10 +105,14 @@ export default function ContentPage() {
     setError("");
     setMessage("");
     try {
+      const formData = new FormData();
+      formData.set("content_type", contentType);
+      formData.set("title", title);
+      formData.set("body", body);
+      if (image) formData.set("image", image);
       const response = await fetch("/api/content", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content_type: contentType, title, body }),
+        body: formData,
       });
       const result = (await response.json()) as ContentResponse & { item?: ContentItem };
       if (!response.ok || !result.item) {
@@ -113,6 +122,7 @@ export default function ContentPage() {
       setItems((current) => [result.item as ContentItem, ...current]);
       setTitle("");
       setBody("");
+      setImage(null);
       setMessage(result.message ?? "Content saved.");
     } catch {
       setError("Unable to reach the content service.");
@@ -126,6 +136,8 @@ export default function ContentPage() {
     setEditType(item.content_type);
     setEditTitle(item.title);
     setEditBody(item.body);
+    setEditImage(null);
+    setRemoveEditImage(false);
     setError("");
   }
 
@@ -135,10 +147,15 @@ export default function ContentPage() {
     setAction("edit");
     setError("");
     try {
+      const formData = new FormData();
+      formData.set("content_type", editType);
+      formData.set("title", editTitle);
+      formData.set("body", editBody);
+      formData.set("remove_image", String(removeEditImage));
+      if (editImage) formData.set("image", editImage);
       const response = await fetch(`/api/content/${item.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content_type: editType, title: editTitle, body: editBody }),
+        body: formData,
       });
       const result = (await response.json()) as { item?: ContentItem; message?: string };
       if (!response.ok || !result.item) {
@@ -247,6 +264,16 @@ export default function ContentPage() {
                   value={body}
                 />
               </label>
+              <label className="block space-y-2 text-sm font-medium text-foreground">
+                Image (optional)
+                <input
+                  accept="image/jpeg,image/png,image/webp"
+                  className="block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:font-medium file:text-background"
+                  onChange={(event) => setImage(event.target.files?.[0] ?? null)}
+                  type="file"
+                />
+                <span className="text-xs text-muted">JPG, PNG, or WEBP up to 5 MB.</span>
+              </label>
               <PrimaryButton disabled={saving} onClick={() => void createContent()}>
                 {saving ? "Saving…" : "Save draft"}
               </PrimaryButton>
@@ -290,8 +317,31 @@ export default function ContentPage() {
                           Message
                           <textarea className="min-h-32 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-foreground" onChange={(event) => setEditBody(event.target.value)} value={editBody} />
                         </label>
+                        <label className="block space-y-2 text-sm font-medium text-foreground">
+                          Replace image
+                          <input
+                            accept="image/jpeg,image/png,image/webp"
+                            className="block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:font-medium file:text-background"
+                            onChange={(event) => {
+                              setEditImage(event.target.files?.[0] ?? null);
+                              setRemoveEditImage(false);
+                            }}
+                            type="file"
+                          />
+                        </label>
+                        {item.image_url ? (
+                          <label className="flex items-center gap-2 text-sm text-muted">
+                            <input checked={removeEditImage} onChange={(event) => setRemoveEditImage(event.target.checked)} type="checkbox" />
+                            Remove current image
+                          </label>
+                        ) : null}
                       </div>
-                    ) : <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-muted">{item.body}</p>}
+                    ) : (
+                      <>
+                        {item.image_url ? <img alt="" className="mt-4 max-h-64 w-full rounded-xl object-cover" src={item.image_url} /> : null}
+                        <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-muted">{item.body}</p>
+                      </>
+                    )}
                     {item.publication_status === "rejected" && item.rejection_reason ? (
                       <p className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200">
                         <span className="font-semibold">Review feedback:</span> {item.rejection_reason}

@@ -11,6 +11,11 @@ import {
   getContentSubmissionUpdate,
 } from "../lib/content/publication.ts";
 import { validateContent, validateRejectionReason } from "../lib/validation/content.ts";
+import {
+  MAX_CONTENT_IMAGE_SIZE,
+  createContentImagePath,
+  validateContentImage,
+} from "../lib/content/storage.ts";
 
 test("validates and normalizes merchant content", () => {
   const result = validateContent({
@@ -45,6 +50,18 @@ test("content publication follows merchant review workflow", () => {
     publication_status: "pending_review",
     submitted_at: "2026-10-07T00:00:00.000Z",
     rejection_reason: null,
+  });
+
+  test("validates safe content images and storage paths", () => {
+    const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+    assert.equal(validateContentImage("offer.png", "image/png", png.length, png).valid, true);
+    assert.equal(validateContentImage("../offer.png", "image/png", png.length, png).valid, false);
+    assert.equal(validateContentImage("offer.png", "image/jpeg", png.length, png).valid, false);
+    assert.equal(validateContentImage("offer.png", "image/png", MAX_CONTENT_IMAGE_SIZE + 1, png).valid, false);
+    assert.equal(
+      createContentImagePath("11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "png"),
+      "11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222.png",
+    );
   });
   assert.deepEqual(getContentApprovalUpdate("pending_review"), { publication_status: "approved" });
   assert.deepEqual(getContentPublicationUpdate("approved", "2026-10-07T00:00:00.000Z"), {
