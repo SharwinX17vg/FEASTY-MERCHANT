@@ -13,7 +13,7 @@ export function getContentPublicationLabel(status: string | null | undefined) {
 }
 
 export function canSubmitContent(role: string | null | undefined, status: string | null | undefined) {
-  return managerRoles.has(role ?? "") && status === "draft";
+  return managerRoles.has(role ?? "") && ["draft", "rejected"].includes(status ?? "");
 }
 
 export function canReviewContent(role: string | null | undefined, status: string | null | undefined) {
@@ -27,7 +27,15 @@ export function canPublishContent(role: string | null | undefined, status: strin
 }
 
 export function getContentSubmissionUpdate(status: string | null | undefined, submittedAt: string) {
-  return status === "draft" ? { publication_status: "pending_review" as const, submitted_at: submittedAt } : null;
+  return ["draft", "rejected"].includes(status ?? "")
+    ? { publication_status: "pending_review" as const, submitted_at: submittedAt, rejection_reason: null }
+    : null;
+}
+
+export function getContentRejectionUpdate(status: string | null | undefined, reason: string) {
+  return status === "pending_review"
+    ? { publication_status: "rejected" as const, rejection_reason: reason }
+    : null;
 }
 
 export function getContentApprovalUpdate(status: string | null | undefined) {

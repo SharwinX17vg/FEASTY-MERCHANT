@@ -48,3 +48,10 @@ export function validateContent(input: ContentInput) {
 
   return { errors, values };
 }
+
+export function validateRejectionReason(value: unknown) {
+  const reason = String(value ?? "").trim();
+  return reason.length >= 2 && reason.length <= 1000
+    ? { reason }
+    : { error: "Enter a rejection reason between 2 and 1,000 characters." };
+}

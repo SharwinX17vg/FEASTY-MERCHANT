@@ -24,6 +24,7 @@ type ContentItem = {
   publication_status: string;
   submitted_at: string | null;
   published_at: string | null;
+  rejection_reason: string | null;
   created_at: string;
 };
 
@@ -57,7 +58,12 @@ export default function ContentPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
-  const [action, setAction] = useState<"submit" | "approve" | "publish" | null>(null);
+  const [action, setAction] = useState<"submit" | "approve" | "publish" | "reject" | "edit" | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editType, setEditType] = useState<ContentType>("post");
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -115,6 +121,68 @@ export default function ContentPage() {
     }
   }
 
+  function startEditing(item: ContentItem) {
+    setEditingId(item.id);
+    setEditType(item.content_type);
+    setEditTitle(item.title);
+    setEditBody(item.body);
+    setError("");
+  }
+
+  async function saveEdit(item: ContentItem) {
+    if (actionId) return;
+    setActionId(item.id);
+    setAction("edit");
+    setError("");
+    try {
+      const response = await fetch(`/api/content/${item.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content_type: editType, title: editTitle, body: editBody }),
+      });
+      const result = (await response.json()) as { item?: ContentItem; message?: string };
+      if (!response.ok || !result.item) {
+        setError(result.message ?? "Unable to update content.");
+        return;
+      }
+      setItems((current) => current.map((entry) => (entry.id === item.id ? result.item as ContentItem : entry)));
+      setEditingId(null);
+      setMessage(result.message ?? "Content updated.");
+    } catch {
+      setError("Unable to reach the content service.");
+    } finally {
+      setActionId(null);
+      setAction(null);
+    }
+  }
+
+  async function rejectContent(item: ContentItem) {
+    if (actionId) return;
+    setActionId(item.id);
+    setAction("reject");
+    setError("");
+    try {
+      const response = await fetch(`/api/content/${item.id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
+      const result = (await response.json()) as { item?: ContentItem; message?: string };
+      if (!response.ok || !result.item) {
+        setError(result.message ?? "Unable to reject content.");
+        return;
+      }
+      setItems((current) => current.map((entry) => (entry.id === item.id ? result.item as ContentItem : entry)));
+      setRejectionReason("");
+      setMessage(result.message ?? "Content rejected.");
+    } catch {
+      setError("Unable to reach the content service.");
+    } finally {
+      setActionId(null);
+      setAction(null);
+    }
+  }
+
   async function updatePublication(
     item: ContentItem,
     nextAction: "submit" | "approve" | "publish",
@@ -131,6 +199,7 @@ export default function ContentPage() {
         setError(result.message ?? `Unable to ${nextAction} content.`);
         return;
       }
+
       setItems((current) => current.map((entry) => (entry.id === item.id ? result.item as ContentItem : entry)));
       setMessage(result.message ?? "Content updated.");
     } catch {
@@ -139,6 +208,7 @@ export default function ContentPage() {
       setActionId(null);
       setAction(null);
     }
+
   }
 
   return (
@@ -206,7 +276,27 @@ export default function ContentPage() {
                         {getContentPublicationLabel(item.publication_status)}
                       </span>
                     </div>
-                    <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-muted">{item.body}</p>
+                    {editingId === item.id ? (
+                      <div className="mt-4 space-y-4">
+                        <label className="block space-y-2 text-sm font-medium text-foreground">
+                          Content type
+                          <select className="min-h-11 w-full rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-foreground" onChange={(event) => setEditType(event.target.value as ContentType)} value={editType}>
+                            <option value="post">Post</option>
+                            <option value="offer">Offer</option>
+                          </select>
+                        </label>
+                        <Input label="Title" onChange={(event) => setEditTitle(event.target.value)} value={editTitle} />
+                        <label className="block space-y-2 text-sm font-medium text-foreground">
+                          Message
+                          <textarea className="min-h-32 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-foreground" onChange={(event) => setEditBody(event.target.value)} value={editBody} />
+                        </label>
+                      </div>
+                    ) : <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-muted">{item.body}</p>}
+                    {item.publication_status === "rejected" && item.rejection_reason ? (
+                      <p className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200">
+                        <span className="font-semibold">Review feedback:</span> {item.rejection_reason}
+                      </p>
+                    ) : null}
                     <dl className="mt-5 grid gap-2 border-t border-white/10 pt-4 text-xs text-muted sm:grid-cols-2">
                       <div><dt className="font-medium text-foreground">Active dates</dt><dd className="mt-1">{dateRange(item)}</dd></div>
                       <div><dt className="font-medium text-foreground">Created</dt><dd className="mt-1">{formatDate(item.created_at)}</dd></div>
@@ -214,8 +304,21 @@ export default function ContentPage() {
                       {item.published_at ? <div><dt className="font-medium text-foreground">Published</dt><dd className="mt-1">{formatDate(item.published_at)}</dd></div> : null}
                     </dl>
                     <div className="mt-5 flex flex-wrap gap-3">
+                      {editingId === item.id ? (
+                        <>
+                          <PrimaryButton disabled={actionId === item.id} onClick={() => void saveEdit(item)}>
+                            {actionId === item.id && action === "edit" ? "Saving…" : "Save changes"}
+                          </PrimaryButton>
+                          <SecondaryButton disabled={actionId === item.id} onClick={() => setEditingId(null)}>Cancel</SecondaryButton>
+                        </>
+                      ) : null}
+                      {canSubmitContent(role, item.publication_status) && !editingId ? (
+                        <SecondaryButton disabled={actionId === item.id} onClick={() => void startEditing(item)}>
+                          Edit
+                        </SecondaryButton>
+                      ) : null}
                       {canSubmitContent(role, item.publication_status) ? (
-                        <SecondaryButton disabled={actionId === item.id} onClick={() => void updatePublication(item, "submit")}>
+                        <SecondaryButton disabled={actionId === item.id || editingId === item.id} onClick={() => void updatePublication(item, "submit")}>
                           {actionId === item.id && action === "submit" ? "Submitting…" : "Submit for Review"}
                         </SecondaryButton>
                       ) : null}
@@ -223,6 +326,14 @@ export default function ContentPage() {
                         <SecondaryButton disabled={actionId === item.id} onClick={() => void updatePublication(item, "approve")}>
                           {actionId === item.id && action === "approve" ? "Approving…" : "Approve"}
                         </SecondaryButton>
+                      ) : null}
+                      {canApproveContent(role, item.publication_status) ? (
+                        <div className="flex w-full flex-col gap-2 sm:max-w-md">
+                          <Input label="Rejection reason" onChange={(event) => setRejectionReason(event.target.value)} value={rejectionReason} />
+                          <SecondaryButton disabled={actionId === item.id} onClick={() => void rejectContent(item)}>
+                            {actionId === item.id && action === "reject" ? "Rejecting…" : "Reject"}
+                          </SecondaryButton>
+                        </div>
                       ) : null}
                       {canPublishContent(role, item.publication_status) ? (
                         <SecondaryButton disabled={actionId === item.id} onClick={() => void updatePublication(item, "publish")}>
