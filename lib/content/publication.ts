@@ -12,6 +12,20 @@ export function getContentPublicationLabel(status: string | null | undefined) {
   return publicationStatusLabels[status as keyof typeof publicationStatusLabels] ?? "Draft";
 }
 
+export function isContentCurrentlyActive(
+  startsAt: string | null | undefined,
+  endsAt: string | null | undefined,
+  now = new Date(),
+) {
+  const nowTime = now.getTime();
+  const startsTime = startsAt ? Date.parse(startsAt) : null;
+  const endsTime = endsAt ? Date.parse(endsAt) : null;
+  return (
+    (startsTime === null || (!Number.isNaN(startsTime) && startsTime <= nowTime)) &&
+    (endsTime === null || (!Number.isNaN(endsTime) && endsTime > nowTime))
+  );
+}
+
 export function canSubmitContent(role: string | null | undefined, status: string | null | undefined) {
   return managerRoles.has(role ?? "") && ["draft", "rejected"].includes(status ?? "");
 }

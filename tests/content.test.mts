@@ -9,6 +9,7 @@ import {
   getContentPublicationUpdate,
   getContentRejectionUpdate,
   getContentSubmissionUpdate,
+  isContentCurrentlyActive,
 } from "../lib/content/publication.ts";
 import { validateContent, validateRejectionReason } from "../lib/validation/content.ts";
 import {
@@ -22,6 +23,14 @@ test("validates and normalizes merchant content", () => {
     content_type: "offer",
     title: "  Weekend special ",
     body: "Two-for-one coffee.",
+  });
+
+  test("only currently active content is eligible for public display", () => {
+    const now = new Date("2026-10-08T00:00:00.000Z");
+    assert.equal(isContentCurrentlyActive(null, null, now), true);
+    assert.equal(isContentCurrentlyActive("2026-10-07T00:00:00.000Z", "2026-10-09T00:00:00.000Z", now), true);
+    assert.equal(isContentCurrentlyActive("2026-10-09T00:00:00.000Z", null, now), false);
+    assert.equal(isContentCurrentlyActive(null, "2026-10-08T00:00:00.000Z", now), false);
   });
   assert.deepEqual(result.errors, {});
   assert.equal(result.values.title, "Weekend special");
