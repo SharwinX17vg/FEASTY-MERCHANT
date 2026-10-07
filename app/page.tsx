@@ -175,9 +175,9 @@ export default function Home() {
                   <Icon name="arrow" className="ml-2 size-4 transition group-hover:translate-x-1" />
                 </PrimaryButton>
               </Link>
-              <a href={feastymapUrl} rel="noreferrer" target="_blank">
+              <a href={feastymapUrl} rel="noopener noreferrer" target="_blank">
                 <SecondaryButton>
-                  Explore FEASTYMAP
+                  Explore FEASTY Map
                   <Icon name="globe" className="ml-2 size-4" />
                 </SecondaryButton>
               </a>
