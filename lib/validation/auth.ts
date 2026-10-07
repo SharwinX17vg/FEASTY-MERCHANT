@@ -140,6 +140,7 @@ export function validateSignupInput(input: Record<string, unknown>) {
   const confirmPassword = String(input.confirmPassword ?? "");
   const termsAccepted = input.termsAccepted === true;
   const errors: Record<string, string> = {};
+  let phoneE164: string | undefined;
 
   if (name.length < 2) errors.name = "Enter your full name.";
   const emailError = validateEmail(email);
@@ -148,11 +149,12 @@ export function validateSignupInput(input: Record<string, unknown>) {
   if (country) {
     const phoneResult = normalizePhone(phone, country);
     if (phoneResult.error) errors.phone = phoneResult.error;
+    else phoneE164 = phoneResult.e164;
   }
   const passwordError = validatePassword(password);
   if (passwordError) errors.password = passwordError;
   if (password !== confirmPassword) errors.confirmPassword = "Passwords do not match.";
   if (!termsAccepted) errors.terms = "Accept the Terms & Privacy Policy to continue.";
 
-  return { errors, email, name, country, phone };
+  return { errors, email, name, country, phone, phoneE164 };
 }

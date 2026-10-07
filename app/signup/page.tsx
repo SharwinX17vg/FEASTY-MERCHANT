@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import type { CountryCode } from "libphonenumber-js";
 
 import { Card, Input, PrimaryButton, SecondaryButton } from "@/components/ui";
@@ -10,7 +10,6 @@ import {
   formatPhone,
   getPasswordRequirements,
   getPasswordStrength,
-  normalizePhone,
   reformatPhone,
   supportedCountries,
   validateSignupInput,
@@ -68,12 +67,13 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [country, setCountry] = useState("IN");
+  const [country, setCountry] = useState<CountryCode>("IN");
   const [phone, setPhone] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
   const [countryOpen, setCountryOpen] = useState(false);
   const [highlightedCountry, setHighlightedCountry] = useState(0);
   const [formError, setFormError] = useState("");
+  const [formSuccess, setFormSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const countrySearchRef = useRef<HTMLInputElement>(null);
 
@@ -91,9 +91,9 @@ export default function SignupPage() {
   }, [countrySearch]);
   const selectedCountry = supportedCountries.find(({ country: code }) => code === country) ?? supportedCountries[0];
 
-  function selectCountry(nextCountry: string) {
+  function selectCountry(nextCountry: CountryCode) {
     setPhone((currentPhone) =>
-      reformatPhone(currentPhone, country as CountryCode, nextCountry as CountryCode),
+      reformatPhone(currentPhone, country, nextCountry),
     );
     setCountry(nextCountry);
     setCountrySearch("");
@@ -112,7 +112,7 @@ export default function SignupPage() {
       return;
     }
 
-    setPhone(formatPhone(value, country as CountryCode));
+    setPhone(formatPhone(value, country));
   }
 
   function handlePhonePaste(event: React.ClipboardEvent<HTMLInputElement>) {
@@ -127,7 +127,6 @@ export default function SignupPage() {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
-    const phoneResult = normalizePhone(phone, country as CountryCode);
     const submittedConfirmPassword = String(formData.get("confirmPassword") ?? "");
     const nextErrors: FormErrors = {};
 
@@ -141,10 +140,10 @@ export default function SignupPage() {
       termsAccepted,
     });
     Object.assign(nextErrors, validation.errors);
-    if ("error" in phoneResult) nextErrors.phone = phoneResult.error;
     setErrors(nextErrors);
     setFormError("");
-    if (Object.keys(nextErrors).length > 0) return;
+    setFormSuccess("");
+    if (Object.keys(nextErrors).length > 0 || !validation.phoneE164) return;
 
     setIsSubmitting(true);
     try {
@@ -155,7 +154,7 @@ export default function SignupPage() {
           name: formData.get("name"),
           email,
           country,
-          phone: "e164" in phoneResult ? phoneResult.e164 : phone,
+          phone: validation.phoneE164,
           password,
           confirmPassword: submittedConfirmPassword,
           termsAccepted,
@@ -171,7 +170,10 @@ export default function SignupPage() {
         setFormError(getSafeAuthError(response.status, result.message));
         return;
       }
-      window.location.assign(result.confirmed ? "/register/business-type" : "/check-email");
+      setFormSuccess("Your account was created successfully. Continuing…");
+      window.setTimeout(() => {
+        window.location.assign(result.confirmed ? "/register/business-type" : "/check-email");
+      }, 400);
     } catch {
       setFormError(getNetworkErrorMessage());
     } finally {
@@ -256,6 +258,11 @@ export default function SignupPage() {
             {formError ? (
               <p className="mb-5 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200" role="alert">
                 {formError}
+              </p>
+            ) : null}
+            {formSuccess ? (
+              <p className="mb-5 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200" role="status">
+                {formSuccess}
               </p>
             ) : null}
             <form className="space-y-4" onSubmit={handleSubmit} noValidate>

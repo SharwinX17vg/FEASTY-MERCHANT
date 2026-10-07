@@ -127,7 +127,7 @@ function SectionHeading({
 }
 
 export default function Home() {
-  const feastymapUrl = process.env.NEXT_PUBLIC_FEASTYMAP_URL || "https://feastymap.com";
+  const feastymapUrl = "https://feastymap.vercel.app/outing-planner";
 
   return (
     <main className="overflow-hidden bg-background">

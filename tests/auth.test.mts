@@ -236,6 +236,7 @@ test("signup validation accepts valid input without errors", () => {
   assert.equal(result.email, "asha@example.com");
   assert.equal(result.name, "Asha Merchant");
   assert.equal(result.country, "IN");
+  assert.equal(result.phoneE164, "+919876543210");
 });
 
 test("verification storage accepts matching PDF metadata and signature", () => {
