@@ -25,6 +25,20 @@ type ContentResponse = {
   message?: string;
 };
 
+type PublicBusiness = {
+  id: string;
+  name: string;
+  code: string;
+  category: string;
+  description: string | null;
+  website_url: string | null;
+};
+
+type BusinessResponse = {
+  business?: PublicBusiness;
+  message?: string;
+};
+
 function formatDate(value: string | null) {
   if (!value) return "Always";
   const date = new Date(value);
@@ -62,9 +76,11 @@ function ContentCard({ item }: { item: PublicContentItem }) {
   );
 }
 
-function PublicContentFeed() {
-  const businessId = useSearchParams().get("businessId") ?? "";
+export function PublicContentFeed({ routeBusinessId = "" }: { routeBusinessId?: string }) {
+  const queryBusinessId = useSearchParams().get("businessId") ?? "";
+  const businessId = routeBusinessId || queryBusinessId;
   const [items, setItems] = useState<PublicContentItem[]>([]);
+  const [business, setBusiness] = useState<PublicBusiness | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -73,10 +89,16 @@ function PublicContentFeed() {
 
     async function loadContent() {
       try {
-        const response = await fetch(`/api/public/content?businessId=${encodeURIComponent(businessId)}`);
-        const result = (await response.json()) as ContentResponse;
-        if (!response.ok) throw new Error(result.message ?? "Unable to load published content.");
-        setItems((result.items ?? []).filter((item) => isContentCurrentlyActive(item.starts_at, item.ends_at)));
+        const [businessResponse, contentResponse] = await Promise.all([
+          fetch(`/api/public/business?businessId=${encodeURIComponent(businessId)}`),
+          fetch(`/api/public/content?businessId=${encodeURIComponent(businessId)}`),
+        ]);
+        const businessResult = (await businessResponse.json()) as BusinessResponse;
+        const contentResult = (await contentResponse.json()) as ContentResponse;
+        if (!businessResponse.ok) throw new Error(businessResult.message ?? "Unable to load business.");
+        if (!contentResponse.ok) throw new Error(contentResult.message ?? "Unable to load published content.");
+        setBusiness(businessResult.business ?? null);
+        setItems((contentResult.items ?? []).filter((item) => isContentCurrentlyActive(item.starts_at, item.ends_at)));
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Unable to load published content.");
       } finally {
@@ -96,16 +118,36 @@ function PublicContentFeed() {
           <Link className="text-lg font-bold tracking-tight text-white" href="/">
             FEASTY<span className="text-primary">MERCHANT</span>
           </Link>
-          <Link href="https://feastymap.vercel.app/outing-planner" rel="noopener noreferrer" target="_blank">
+          <a href="https://feastymap.vercel.app/outing-planner" rel="noopener noreferrer" target="_blank">
             <SecondaryButton className="min-h-10 px-4 py-2 text-xs sm:text-sm">Explore FEASTY Map</SecondaryButton>
-          </Link>
+          </a>
         </nav>
 
         <section className="mx-auto max-w-6xl py-16 sm:py-24">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">FEASTYMAP updates</p>
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-6xl">Fresh from this business</h1>
-            <p className="mt-5 text-base leading-7 text-muted">Discover the latest posts and offers currently available from this FEASTY business.</p>
+            {business ? (
+              <>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">{business.category}</p>
+                <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-6xl">{business.name}</h1>
+                <p className="mt-5 text-base leading-7 text-muted">{business.description ?? "Fresh posts and offers from this FEASTY business."}</p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <a href="https://feastymap.vercel.app/outing-planner" rel="noopener noreferrer" target="_blank">
+                    <SecondaryButton>View on FEASTY Map</SecondaryButton>
+                  </a>
+                  {business.website_url ? (
+                    <a className="inline-flex min-h-11 items-center rounded-xl border border-white/15 px-4 text-sm font-medium text-foreground transition hover:border-primary hover:text-primary" href={business.website_url} rel="noopener noreferrer" target="_blank">
+                      Visit business website
+                    </a>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">FEASTYMAP updates</p>
+                <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-6xl">Fresh from this business</h1>
+                <p className="mt-5 text-base leading-7 text-muted">Discover the latest posts and offers currently available from this FEASTY business.</p>
+              </>
+            )}
           </div>
 
           {!businessId ? (
