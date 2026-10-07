@@ -1,5 +1,16 @@
 const managerRoles = new Set(["org_owner", "admin", "moderator", "branch_manager"]);
 const reviewerRoles = new Set(["admin", "moderator"]);
+const publicationStatusLabels = {
+  draft: "Draft",
+  pending_review: "Pending Review",
+  approved: "Approved",
+  published: "Published",
+  rejected: "Rejected",
+} as const;
+
+export function getContentPublicationLabel(status: string | null | undefined) {
+  return publicationStatusLabels[status as keyof typeof publicationStatusLabels] ?? "Draft";
+}
 
 export function canSubmitContent(role: string | null | undefined, status: string | null | undefined) {
   return managerRoles.has(role ?? "") && status === "draft";
