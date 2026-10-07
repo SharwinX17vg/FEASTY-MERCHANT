@@ -9,6 +9,7 @@ import { Card, SecondaryButton } from "@/components/ui";
 import {
   canReviewMenuItems,
   getMenuItemPublicationLabel,
+  canPublishMenuItem,
   type MenuPublicationStatus,
 } from "@/lib/menu-items/publication";
 
@@ -28,6 +29,7 @@ export default function MenuReviewPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -60,7 +62,13 @@ export default function MenuReviewPage() {
             }),
         );
 
-        if (!cancelled) setItems(branchItems.flat().filter((item) => item.publication_status === "pending_review"));
+        if (!cancelled) {
+          setItems(
+            branchItems
+              .flat()
+              .filter((item) => ["pending_review", "approved"].includes(item.publication_status)),
+          );
+        }
       } catch (loadError) {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Unable to load menu review items.");
       } finally {
@@ -94,6 +102,26 @@ export default function MenuReviewPage() {
     }
   }
 
+  async function publishItem(item: MenuItem) {
+    if (publishingId || !canPublishMenuItem(role, item.publication_status)) return;
+    setPublishingId(item.id);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(`/api/branches/${item.branch_id}/menu-items/${item.id}/publish`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as { item?: MenuItem; message?: string };
+      if (!response.ok || !result.item) throw new Error(result.message ?? "Unable to publish menu item.");
+      setItems((current) => current.map((entry) => (entry.id === item.id ? result.item as MenuItem : entry)));
+      setMessage(result.message ?? "Menu item published.");
+    } catch (publishError) {
+      setError(publishError instanceof Error ? publishError.message : "Unable to publish menu item.");
+    } finally {
+      setPublishingId(null);
+    }
+  }
+
   return (
     <DashboardLayout activeItem="Menu">
       <div className="min-h-screen bg-background">
@@ -106,9 +134,9 @@ export default function MenuReviewPage() {
           {error ? <DashboardNotice kind="error">{error}</DashboardNotice> : null}
           {message ? <DashboardNotice kind="success">{message}</DashboardNotice> : null}
           {!loading && !canReviewMenuItems(role) ? <Card className="mt-8 p-6"><p className="text-sm text-muted">You do not have permission to review menu items.</p></Card> : null}
-          {loading ? <Card className="mt-8 p-6"><p className="text-sm text-muted" role="status">Loading pending menu items…</p></Card> : null}
-          {!loading && canReviewMenuItems(role) && items.length === 0 ? <Card className="mt-8 p-6"><p className="text-sm text-muted">No menu items are pending review.</p></Card> : null}
-          {!loading && canReviewMenuItems(role) && items.length > 0 ? <div className="mt-8 grid gap-5 lg:grid-cols-2">{items.map((item) => <Card className="p-5 sm:p-6" key={item.id}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">{item.category || "Menu item"}</p><h2 className="mt-2 text-xl font-semibold text-white">{item.name}</h2></div><span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">{getMenuItemPublicationLabel(item.publication_status)}</span></div><p className="mt-4 min-h-6 text-sm leading-6 text-muted">{item.description || "No description provided."}</p><p className="mt-5 text-lg font-semibold text-white">{new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(Number(item.price))}</p><SecondaryButton className="mt-5" disabled={approvingId === item.id} onClick={() => void approveItem(item)}>{approvingId === item.id ? "Approving…" : "Approve"}</SecondaryButton></Card>)}</div> : null}
+          {loading ? <Card className="mt-8 p-6"><p className="text-sm text-muted" role="status">Loading menu items…</p></Card> : null}
+          {!loading && canReviewMenuItems(role) && items.length === 0 ? <Card className="mt-8 p-6"><p className="text-sm text-muted">No menu items are pending review or approved.</p></Card> : null}
+          {!loading && canReviewMenuItems(role) && items.length > 0 ? <div className="mt-8 grid gap-5 lg:grid-cols-2">{items.map((item) => <Card className="p-5 sm:p-6" key={item.id}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">{item.category || "Menu item"}</p><h2 className="mt-2 text-xl font-semibold text-white">{item.name}</h2></div><span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">{getMenuItemPublicationLabel(item.publication_status)}</span></div><p className="mt-4 min-h-6 text-sm leading-6 text-muted">{item.description || "No description provided."}</p><p className="mt-5 text-lg font-semibold text-white">{new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(Number(item.price))}</p>{item.publication_status === "pending_review" ? <SecondaryButton className="mt-5" disabled={approvingId === item.id || Boolean(publishingId)} onClick={() => void approveItem(item)}>{approvingId === item.id ? "Approving…" : "Approve"}</SecondaryButton> : null}{item.publication_status === "approved" ? <SecondaryButton className="mt-5" disabled={publishingId === item.id || Boolean(approvingId)} onClick={() => void publishItem(item)}>{publishingId === item.id ? "Publishing…" : "Publish"}</SecondaryButton> : null}</Card>)}</div> : null}
         </div>
       </div>
     </DashboardLayout>
