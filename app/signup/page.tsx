@@ -107,8 +107,7 @@ export default function SignupPage() {
 
     if (detectedCountry) {
       setCountry(detectedCountry);
-      const parsedNumber = value.replace(/[^\d+]/g, "");
-      setPhone(formatPhone(parsedNumber, detectedCountry));
+      setPhone(reformatPhone(value, detectedCountry, detectedCountry));
       return;
     }
 
@@ -200,7 +199,7 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background">
+    <main className="relative min-h-screen overflow-x-hidden bg-background">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_15%,rgba(255,122,0,0.2),transparent_34%),radial-gradient(circle_at_90%_85%,rgba(255,122,0,0.1),transparent_32%)]" />
       <div className="relative mx-auto grid min-h-screen max-w-7xl lg:grid-cols-2">
         <section className="relative flex flex-col justify-between px-6 py-8 sm:px-10 lg:px-16 lg:py-12">
@@ -339,7 +338,7 @@ export default function SignupPage() {
                         </div>
                         <div
                           aria-label="Countries"
-                          className="max-h-56 overflow-y-auto p-1"
+                          className="max-h-[min(24rem,50vh)] overflow-y-auto p-1"
                           id="country-options"
                           role="listbox"
                         >
