@@ -1,13 +1,26 @@
 import { NextResponse } from "next/server";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { validateBranch } from "@/lib/validation/branch";
 
 export async function POST(request: Request) {
   try {
-    const input = (await request.json()) as Record<string, string>;
-    const required = ["name", "addressLine1", "city", "countryCode"];
-    if (required.some((key) => !String(input[key] ?? "").trim())) {
-      return NextResponse.json({ message: "Complete all required location fields." }, { status: 400 });
+    const input = (await request.json()) as Record<string, unknown>;
+    const validation = validateBranch({
+      name: input.name,
+      address_line_1: input.addressLine1,
+      address_line_2: input.addressLine2,
+      city: input.city,
+      state: input.state,
+      postal_code: input.postalCode,
+      country_code: input.countryCode,
+      phone: input.phone,
+    });
+    if (Object.keys(validation.errors).length > 0) {
+      return NextResponse.json(
+        { errors: validation.errors, message: "Enter valid location details." },
+        { status: 400 },
+      );
     }
     const supabase = await getSupabaseServerClient();
     const { data: user } = await supabase.auth.getUser();
@@ -30,14 +43,14 @@ export async function POST(request: Request) {
 
     const branch = await supabase.from("branches").insert({
       business_id: business.id,
-      name: input.name,
-      address_line_1: input.addressLine1,
-      address_line_2: input.addressLine2 || null,
-      city: input.city,
-      state: input.state || null,
-      postal_code: input.postalCode || null,
-      country_code: input.countryCode.toUpperCase(),
-      phone: input.phone || null,
+      name: validation.values.name,
+      address_line_1: validation.values.address_line_1,
+      address_line_2: validation.values.address_line_2,
+      city: validation.values.city,
+      state: validation.values.state,
+      postal_code: validation.values.postal_code,
+      country_code: validation.values.country_code,
+      phone: validation.values.phone,
     }).select("id").single();
     if (branch.error) return NextResponse.json({ message: "Unable to save your branch." }, { status: 400 });
     return NextResponse.json({ id: branch.data.id });

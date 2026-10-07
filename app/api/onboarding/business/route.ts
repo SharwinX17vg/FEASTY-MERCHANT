@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentOnboarding } from "@/lib/onboarding/server";
+import { validateBusinessProfile } from "@/lib/validation/business-profile";
 
 export async function POST(request: Request) {
   try {
@@ -11,11 +12,18 @@ export async function POST(request: Request) {
       name?: string;
       phone?: string;
     };
-    const name = String(input.name ?? "").trim();
     const current = await getCurrentOnboarding();
-    const category = String(input.category ?? current?.category ?? "").trim();
-    if (name.length < 2 || category.length < 2) {
-      return NextResponse.json({ message: "Business name and category are required." }, { status: 400 });
+    const validation = validateBusinessProfile({
+      name: input.name,
+      category: input.category ?? current?.category,
+      email: input.email,
+      phone: input.phone,
+    });
+    if (Object.keys(validation.errors).length > 0) {
+      return NextResponse.json(
+        { errors: validation.errors, message: "Enter valid business details." },
+        { status: 400 },
+      );
     }
 
     const supabase = await getSupabaseServerClient();
@@ -33,7 +41,12 @@ export async function POST(request: Request) {
     if (!organizationId) {
       const organization = await supabase
         .from("organizations")
-        .insert({ name, email: input.email ?? authData.user.email, phone: input.phone, created_by: authData.user.id })
+        .insert({
+          name: validation.values.name,
+          email: validation.values.email || authData.user.email,
+          phone: validation.values.phone || null,
+          created_by: authData.user.id,
+        })
         .select("id")
         .single();
       if (organization.error) return NextResponse.json({ message: "Unable to create your organization." }, { status: 400 });
@@ -48,7 +61,14 @@ export async function POST(request: Request) {
 
     const business = await supabase
       .from("businesses")
-      .insert({ organization_id: organizationId, name, category, email: input.email, phone: input.phone, created_by: authData.user.id })
+      .insert({
+        organization_id: organizationId,
+        name: validation.values.name,
+        category: validation.values.category,
+        email: validation.values.email || null,
+        phone: validation.values.phone || null,
+        created_by: authData.user.id,
+      })
       .select("id")
       .single();
     if (business.error) return NextResponse.json({ message: "Unable to save your business." }, { status: 400 });
