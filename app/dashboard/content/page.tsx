@@ -34,6 +34,7 @@ type ContentItem = {
   created_at: string;
   view_count?: number;
   click_count?: number;
+  redemption_count?: number;
 };
 
 type ContentResponse = {
@@ -433,6 +434,7 @@ export default function ContentPage() {
                         <div className="mt-2 flex gap-5">
                           <span>Views: {item.view_count ?? 0}</span>
                           <span>Clicks: {item.click_count ?? 0}</span>
+                          {item.content_type === "offer" && item.offer_code ? <span>Redemptions: {item.redemption_count ?? 0}</span> : null}
                         </div>
                       </div>
                     ) : null}

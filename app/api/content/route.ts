@@ -5,6 +5,7 @@ import { getValidatedWorkspaceContext } from "@/lib/workspace/context";
 import { validateContent } from "@/lib/validation/content";
 import { CONTENT_IMAGE_BUCKET, createContentImagePath, validateContentImage } from "@/lib/content/storage";
 import { countContentAnalyticsEvents } from "@/lib/validation/contentAnalytics";
+import { countContentRedemptions } from "@/lib/validation/contentRedemption";
 
 const contentSelect = "id,business_id,content_type,title,body,starts_at,ends_at,original_price,offer_price,discount_percentage,offer_code,publication_status,rejection_reason,image_path,submitted_at,published_at,created_by,created_at,updated_at";
 
@@ -29,9 +30,23 @@ export async function GET() {
     : { data: [], error: null };
   if (analytics.error) return NextResponse.json({ message: "Unable to load content analytics." }, { status: 503 });
   const analyticsCounts = countContentAnalyticsEvents(analytics.data ?? []);
+  const publishedOfferIds = (data ?? [])
+    .filter((item) => item.publication_status === "published" && item.content_type === "offer" && item.offer_code)
+    .map((item) => item.id);
+  const redemptions = publishedOfferIds.length
+    ? await supabase
+      .from("merchant_content_offer_redemptions")
+      .select("content_id,redemption_count")
+      .in("content_id", publishedOfferIds)
+    : { data: [], error: null };
+  if (redemptions.error) return NextResponse.json({ message: "Unable to load offer redemptions." }, { status: 503 });
+  const redemptionCounts = countContentRedemptions(redemptions.data ?? []);
   const items = (data ?? []).map((item) => ({
     ...item,
     ...(item.publication_status === "published" ? analyticsCounts[item.id] ?? { view_count: 0, click_count: 0 } : {}),
+    ...(item.publication_status === "published" && item.content_type === "offer" && item.offer_code
+      ? { redemption_count: redemptionCounts[item.id] ?? 0 }
+      : {}),
     image_url: item.image_path
       ? supabase.storage.from(CONTENT_IMAGE_BUCKET).getPublicUrl(item.image_path).data.publicUrl
       : null,

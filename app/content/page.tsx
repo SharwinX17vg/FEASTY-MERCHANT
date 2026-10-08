@@ -47,6 +47,15 @@ async function recordContentAnalytics(contentId: string, eventType: "view" | "cl
   });
 }
 
+async function redeemContentOffer(contentId: string) {
+  const response = await fetch(`/api/public/content/${encodeURIComponent(contentId)}/redeem`, {
+    method: "POST",
+    keepalive: true,
+  });
+  const result = (await response.json()) as { message?: string };
+  if (!response.ok) throw new Error(result.message ?? "This offer is not currently available.");
+}
+
 type BusinessResponse = {
   business?: PublicBusiness;
   message?: string;
@@ -66,6 +75,21 @@ function activeDates(item: PublicContentItem) {
 }
 
 function ContentCard({ item }: { item: PublicContentItem }) {
+  const [redemptionMessage, setRedemptionMessage] = useState("");
+  const [redemptionError, setRedemptionError] = useState("");
+
+  async function handleUseOffer() {
+    setRedemptionMessage("");
+    setRedemptionError("");
+    await recordContentAnalytics(item.id, "click");
+    try {
+      await redeemContentOffer(item.id);
+      setRedemptionMessage("Offer used. Show the code at the business.");
+    } catch (error) {
+      setRedemptionError(error instanceof Error ? error.message : "This offer is not currently available.");
+    }
+  }
+
   return (
     <Card className="overflow-hidden">
       {item.image_url ? (
@@ -94,11 +118,13 @@ function ContentCard({ item }: { item: PublicContentItem }) {
         ) : null}
         <button
           className="mt-5 rounded-xl border border-primary/40 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
-          onClick={() => void recordContentAnalytics(item.id, "click")}
+          onClick={() => void (item.content_type === "offer" && item.offer_code ? handleUseOffer() : recordContentAnalytics(item.id, "click"))}
           type="button"
         >
-          {item.content_type === "offer" ? "View offer" : "View content"}
+          {item.content_type === "offer" && item.offer_code ? "Use Offer" : item.content_type === "offer" ? "View offer" : "View content"}
         </button>
+        {redemptionMessage ? <p className="mt-3 text-sm text-primary">{redemptionMessage}</p> : null}
+        {redemptionError ? <p className="mt-3 text-sm text-red-200">{redemptionError}</p> : null}
       </div>
     </Card>
   );

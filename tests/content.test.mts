@@ -13,6 +13,7 @@ import {
 } from "../lib/content/publication.ts";
 import { validateContent, validateRejectionReason } from "../lib/validation/content.ts";
 import { countContentAnalyticsEvents, validateContentAnalyticsEvent } from "../lib/validation/contentAnalytics.ts";
+import { countContentRedemptions, validateOfferRedemption } from "../lib/validation/contentRedemption.ts";
 import {
   MAX_CONTENT_IMAGE_SIZE,
   createContentImagePath,
@@ -104,6 +105,30 @@ test("counts aggregate content analytics events", () => {
   ]), {
     "content-1": { view_count: 5, click_count: 1 },
     "content-2": { view_count: 0, click_count: 4 },
+  });
+
+  test("validates active coded offer redemption conditions", () => {
+    const now = new Date("2026-10-08T00:00:00.000Z");
+    const offer = {
+      content_type: "offer",
+      offer_code: "SAVE10",
+      publication_status: "published",
+      starts_at: "2026-10-07T00:00:00.000Z",
+      ends_at: "2026-10-09T00:00:00.000Z",
+    };
+    assert.deepEqual(validateOfferRedemption(offer, now), { valid: true });
+    assert.equal(validateOfferRedemption({ ...offer, ends_at: "2026-10-08T00:00:00.000Z" }, now).valid, false);
+    assert.equal(validateOfferRedemption({ ...offer, publication_status: "draft" }, now).valid, false);
+    assert.equal(validateOfferRedemption({ ...offer, offer_code: null }, now).valid, false);
+    assert.equal(validateOfferRedemption({ ...offer, content_type: "post" }, now).valid, false);
+  });
+
+  test("counts aggregate offer redemptions", () => {
+    assert.deepEqual(countContentRedemptions([
+      { content_id: "content-1", redemption_count: 2 },
+      { content_id: "content-1", redemption_count: "3" },
+      { content_id: "content-2", redemption_count: 1 },
+    ]), { "content-1": 5, "content-2": 1 });
   });
 });
 
