@@ -22,6 +22,7 @@ type ContentItem = {
   body: string;
   starts_at: string | null;
   ends_at: string | null;
+  publish_at: string | null;
   original_price: number | null;
   offer_price: number | null;
   discount_percentage: number | null;
@@ -69,6 +70,7 @@ export default function ContentPage() {
   const [body, setBody] = useState("");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
+  const [publishAt, setPublishAt] = useState("");
   const [originalPrice, setOriginalPrice] = useState("");
   const [offerPrice, setOfferPrice] = useState("");
   const [discountPercentage, setDiscountPercentage] = useState("");
@@ -84,6 +86,7 @@ export default function ContentPage() {
   const [editBody, setEditBody] = useState("");
   const [editStartsAt, setEditStartsAt] = useState("");
   const [editEndsAt, setEditEndsAt] = useState("");
+  const [editPublishAt, setEditPublishAt] = useState("");
   const [editOriginalPrice, setEditOriginalPrice] = useState("");
   const [editOfferPrice, setEditOfferPrice] = useState("");
   const [editDiscountPercentage, setEditDiscountPercentage] = useState("");
@@ -134,6 +137,7 @@ export default function ContentPage() {
       formData.set("body", body);
       formData.set("starts_at", startsAt);
       formData.set("ends_at", endsAt);
+      formData.set("publish_at", publishAt);
       formData.set("original_price", originalPrice);
       formData.set("offer_price", offerPrice);
       formData.set("discount_percentage", discountPercentage);
@@ -153,6 +157,7 @@ export default function ContentPage() {
       setBody("");
       setStartsAt("");
       setEndsAt("");
+      setPublishAt("");
       setOriginalPrice("");
       setOfferPrice("");
       setDiscountPercentage("");
@@ -173,6 +178,7 @@ export default function ContentPage() {
     setEditBody(item.body);
     setEditStartsAt(item.starts_at ? item.starts_at.slice(0, 16) : "");
     setEditEndsAt(item.ends_at ? item.ends_at.slice(0, 16) : "");
+    setEditPublishAt(item.publish_at ? item.publish_at.slice(0, 16) : "");
     setEditOriginalPrice(item.original_price === null ? "" : String(item.original_price));
     setEditOfferPrice(item.offer_price === null ? "" : String(item.offer_price));
     setEditDiscountPercentage(item.discount_percentage === null ? "" : String(item.discount_percentage));
@@ -194,6 +200,7 @@ export default function ContentPage() {
       formData.set("body", editBody);
       formData.set("starts_at", editStartsAt);
       formData.set("ends_at", editEndsAt);
+      formData.set("publish_at", editPublishAt);
       formData.set("original_price", editOriginalPrice);
       formData.set("offer_price", editOfferPrice);
       formData.set("discount_percentage", editDiscountPercentage);
@@ -363,6 +370,7 @@ export default function ContentPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input label="Starts (optional)" onChange={(event) => setStartsAt(event.target.value)} type="datetime-local" value={startsAt} />
                 <Input label="Ends (optional)" onChange={(event) => setEndsAt(event.target.value)} type="datetime-local" value={endsAt} />
+                <Input label="Publish at (optional)" onChange={(event) => setPublishAt(event.target.value)} type="datetime-local" value={publishAt} />
               </div>
               {contentType === "offer" ? (
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -385,6 +393,7 @@ export default function ContentPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input label="Starts (optional)" onChange={(event) => setEditStartsAt(event.target.value)} type="datetime-local" value={editStartsAt} />
                 <Input label="Ends (optional)" onChange={(event) => setEditEndsAt(event.target.value)} type="datetime-local" value={editEndsAt} />
+                <Input label="Publish at (optional)" onChange={(event) => setEditPublishAt(event.target.value)} type="datetime-local" value={editPublishAt} />
               </div>
               {editType === "offer" ? (
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -420,7 +429,7 @@ export default function ContentPage() {
                         <h3 className="mt-2 text-xl font-semibold text-white">{item.title}</h3>
                       </div>
                       <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
-                        {getContentPublicationLabel(item.publication_status)}
+                        {getContentPublicationLabel(item.publication_status, item.publish_at)}
                       </span>
                     </div>
                     {editingId === item.id ? (
@@ -477,6 +486,7 @@ export default function ContentPage() {
                     ) : null}
                     <dl className="mt-5 grid gap-2 border-t border-white/10 pt-4 text-xs text-muted sm:grid-cols-2">
                       <div><dt className="font-medium text-foreground">Active dates</dt><dd className="mt-1">{dateRange(item)}</dd></div>
+                      {item.publish_at ? <div><dt className="font-medium text-foreground">Publish at</dt><dd className="mt-1">{formatDate(item.publish_at)}</dd></div> : null}
                       <div><dt className="font-medium text-foreground">Created</dt><dd className="mt-1">{formatDate(item.created_at)}</dd></div>
                       {item.submitted_at ? <div><dt className="font-medium text-foreground">Submitted</dt><dd className="mt-1">{formatDate(item.submitted_at)}</dd></div> : null}
                       {item.published_at ? <div><dt className="font-medium text-foreground">Published</dt><dd className="mt-1">{formatDate(item.published_at)}</dd></div> : null}

@@ -4,6 +4,8 @@ import test from "node:test";
 import {
   canApproveContent,
   canPublishContent,
+  getContentPublicationLabel,
+  isContentPubliclyAvailable,
   canSubmitContent,
   getContentApprovalUpdate,
   getContentPublicationUpdate,
@@ -94,6 +96,22 @@ test("validates content analytics events", () => {
   assert.deepEqual(validateContentAnalyticsEvent("view"), { eventType: "view" });
   assert.deepEqual(validateContentAnalyticsEvent("click"), { eventType: "click" });
   assert.equal(validateContentAnalyticsEvent("scroll").error, "Choose a valid analytics event.");
+});
+
+test("validates scheduled publication dates and public availability", () => {
+  const validation = validateContent({
+    content_type: "post",
+    title: "Scheduled",
+    body: "Coming soon",
+    publish_at: "2026-10-10T10:00:00.000Z",
+    ends_at: "2026-10-10T09:00:00.000Z",
+  });
+  assert.equal(validation.errors.publish_at, "Publish date must be before the end date.");
+  const now = new Date("2026-10-08T00:00:00.000Z");
+  assert.equal(isContentPubliclyAvailable("published", "2026-10-09T00:00:00.000Z", null, null, now), false);
+  assert.equal(isContentPubliclyAvailable("published", "2026-10-07T00:00:00.000Z", null, null, now), true);
+  assert.equal(isContentPubliclyAvailable("approved", "2026-10-07T00:00:00.000Z", null, null, now), false);
+  assert.equal(getContentPublicationLabel("published", "2026-10-09T00:00:00.000Z", now), "Scheduled");
 });
 
 test("counts aggregate content analytics events", () => {

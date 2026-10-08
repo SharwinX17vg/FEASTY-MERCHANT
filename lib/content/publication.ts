@@ -8,7 +8,8 @@ const publicationStatusLabels = {
   rejected: "Rejected",
 } as const;
 
-export function getContentPublicationLabel(status: string | null | undefined) {
+export function getContentPublicationLabel(status: string | null | undefined, publishAt?: string | null, now = new Date()) {
+  if (status === "published" && publishAt && Date.parse(publishAt) > now.getTime()) return "Scheduled";
   return publicationStatusLabels[status as keyof typeof publicationStatusLabels] ?? "Draft";
 }
 
@@ -23,6 +24,21 @@ export function isContentCurrentlyActive(
   return (
     (startsTime === null || (!Number.isNaN(startsTime) && startsTime <= nowTime)) &&
     (endsTime === null || (!Number.isNaN(endsTime) && endsTime > nowTime))
+  );
+}
+
+export function isContentPubliclyAvailable(
+  publicationStatus: string | null | undefined,
+  publishAt: string | null | undefined,
+  startsAt: string | null | undefined,
+  endsAt: string | null | undefined,
+  now = new Date(),
+) {
+  const publishTime = publishAt ? Date.parse(publishAt) : null;
+  return (
+    publicationStatus === "published" &&
+    (publishTime === null || (!Number.isNaN(publishTime) && publishTime <= now.getTime())) &&
+    isContentCurrentlyActive(startsAt, endsAt, now)
   );
 }
 

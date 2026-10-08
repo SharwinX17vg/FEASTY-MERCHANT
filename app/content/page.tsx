@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { Card, PageContainer, SecondaryButton } from "@/components/ui";
-import { isContentCurrentlyActive } from "@/lib/content/publication";
+import { isContentPubliclyAvailable } from "@/lib/content/publication";
 import { type ContentType } from "@/lib/validation/content";
 
 type PublicContentItem = {
@@ -16,6 +16,7 @@ type PublicContentItem = {
   body: string;
   starts_at: string | null;
   ends_at: string | null;
+  publish_at: string | null;
   original_price: number | null;
   offer_price: number | null;
   discount_percentage: number | null;
@@ -152,7 +153,7 @@ export function PublicContentFeed({ routeBusinessId = "" }: { routeBusinessId?: 
         if (!businessResponse.ok) throw new Error(businessResult.message ?? "Unable to load business.");
         if (!contentResponse.ok) throw new Error(contentResult.message ?? "Unable to load published content.");
         setBusiness(businessResult.business ?? null);
-        const activeItems = (contentResult.items ?? []).filter((item) => isContentCurrentlyActive(item.starts_at, item.ends_at));
+        const activeItems = (contentResult.items ?? []).filter((item) => isContentPubliclyAvailable("published", item.publish_at, item.starts_at, item.ends_at));
         setItems(activeItems);
         await Promise.all(activeItems.map((item) => recordContentAnalytics(item.id, "view")));
       } catch (loadError) {

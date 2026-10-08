@@ -7,6 +7,7 @@ export type ContentInput = {
   body?: unknown;
   starts_at?: unknown;
   ends_at?: unknown;
+  publish_at?: unknown;
   original_price?: unknown;
   offer_price?: unknown;
   discount_percentage?: unknown;
@@ -19,6 +20,7 @@ export type ContentValues = {
   body: string;
   starts_at: string | null;
   ends_at: string | null;
+  publish_at: string | null;
   original_price: number | null;
   offer_price: number | null;
   discount_percentage: number | null;
@@ -33,6 +35,7 @@ export function validateContent(input: ContentInput) {
     body: String(input.body ?? "").trim(),
     starts_at: String(input.starts_at ?? "").trim() || null,
     ends_at: String(input.ends_at ?? "").trim() || null,
+    publish_at: String(input.publish_at ?? "").trim() || null,
     original_price: input.original_price === undefined || String(input.original_price).trim() === "" ? null : Number(input.original_price),
     offer_price: input.offer_price === undefined || String(input.offer_price).trim() === "" ? null : Number(input.offer_price),
     discount_percentage: input.discount_percentage === undefined || String(input.discount_percentage).trim() === "" ? null : Number(input.discount_percentage),
@@ -52,10 +55,15 @@ export function validateContent(input: ContentInput) {
 
   const startsAt = values.starts_at ? Date.parse(values.starts_at) : null;
   const endsAt = values.ends_at ? Date.parse(values.ends_at) : null;
+  const publishAt = values.publish_at ? Date.parse(values.publish_at) : null;
   if (values.starts_at && startsAt === null) errors.starts_at = "Enter a valid start date.";
   if (values.ends_at && endsAt === null) errors.ends_at = "Enter a valid end date.";
+  if (values.publish_at && publishAt === null) errors.publish_at = "Enter a valid publish date.";
   if (startsAt !== null && endsAt !== null && startsAt >= endsAt) {
     errors.ends_at = "End date must be after the start date.";
+  }
+  if (publishAt !== null && endsAt !== null && publishAt >= endsAt) {
+    errors.publish_at = "Publish date must be before the end date.";
   }
 
   if (values.content_type === "post") {

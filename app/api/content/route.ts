@@ -7,9 +7,9 @@ import { CONTENT_IMAGE_BUCKET, createContentImagePath, validateContentImage } fr
 import { countContentAnalyticsEvents } from "@/lib/validation/contentAnalytics";
 import { countContentRedemptions } from "@/lib/validation/contentRedemption";
 import { buildContentAnalyticsDashboard } from "@/lib/validation/contentAnalytics";
-import { isContentCurrentlyActive } from "@/lib/content/publication";
+import { isContentPubliclyAvailable } from "@/lib/content/publication";
 
-const contentSelect = "id,business_id,content_type,title,body,starts_at,ends_at,original_price,offer_price,discount_percentage,offer_code,publication_status,rejection_reason,image_path,submitted_at,published_at,created_by,created_at,updated_at";
+const contentSelect = "id,business_id,content_type,title,body,starts_at,ends_at,publish_at,original_price,offer_price,discount_percentage,offer_code,publication_status,rejection_reason,image_path,submitted_at,published_at,created_by,created_at,updated_at";
 
 export async function GET() {
   const result = await getValidatedWorkspaceContext();
@@ -23,7 +23,7 @@ export async function GET() {
     .eq("business_id", result.data.businessId)
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ message: "Unable to load content." }, { status: 503 });
-  const activePublished = (data ?? []).filter((item) => item.publication_status === "published" && isContentCurrentlyActive(item.starts_at, item.ends_at));
+  const activePublished = (data ?? []).filter((item) => isContentPubliclyAvailable(item.publication_status, item.publish_at, item.starts_at, item.ends_at));
   const publishedIds = activePublished.map((item) => item.id);
   const analytics = publishedIds.length
     ? await supabase

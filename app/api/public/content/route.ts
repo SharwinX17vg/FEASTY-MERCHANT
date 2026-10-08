@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { CONTENT_IMAGE_BUCKET } from "@/lib/content/storage";
-import { isContentCurrentlyActive } from "@/lib/content/publication";
+import { isContentPubliclyAvailable } from "@/lib/content/publication";
 
 export async function GET(request: Request) {
   const businessId = new URL(request.url).searchParams.get("businessId");
@@ -9,13 +9,13 @@ export async function GET(request: Request) {
   const supabase = await getSupabaseServerClient();
   const { data, error } = await supabase
     .from("merchant_content")
-    .select("id,business_id,content_type,title,body,starts_at,ends_at,original_price,offer_price,discount_percentage,offer_code,published_at,image_path")
+    .select("id,business_id,content_type,title,body,starts_at,ends_at,publish_at,original_price,offer_price,discount_percentage,offer_code,publication_status,published_at,image_path")
     .eq("business_id", businessId)
     .eq("publication_status", "published")
     .order("published_at", { ascending: false });
   if (error) return NextResponse.json({ message: "Unable to load published content." }, { status: 503 });
   const items = (data ?? [])
-    .filter((item) => isContentCurrentlyActive(item.starts_at, item.ends_at))
+    .filter((item) => isContentPubliclyAvailable(item.publication_status, item.publish_at, item.starts_at, item.ends_at))
     .map((item) => ({
       ...item,
       image_url: item.image_path
