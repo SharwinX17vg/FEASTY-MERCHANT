@@ -40,9 +40,21 @@ type ContentItem = {
 };
 
 type ContentResponse = {
+  audit?: ContentAuditItem[];
   items?: ContentItem[];
   analytics?: ContentAnalyticsDashboard;
   message?: string;
+};
+
+type ContentAuditItem = {
+  id: string;
+  content_id: string;
+  business_id: string;
+  actor_id: string | null;
+  action: string;
+  from_status: string | null;
+  to_status: string | null;
+  created_at: string;
 };
 
 function formatDate(value: string | null | undefined) {
@@ -61,8 +73,17 @@ function dateRange(item: ContentItem) {
   return `${formatDate(item.starts_at)} – ${formatDate(item.ends_at)}`;
 }
 
+function auditActionLabel(action: string) {
+  return action.replaceAll("_", " ");
+}
+
+function auditActorLabel(actorId: string | null) {
+  return actorId ? `User ${actorId.slice(0, 8)}` : "System";
+}
+
 export default function ContentPage() {
   const [items, setItems] = useState<ContentItem[]>([]);
+  const [audit, setAudit] = useState<ContentAuditItem[]>([]);
   const [analytics, setAnalytics] = useState<ContentAnalyticsDashboard | null>(null);
   const [role, setRole] = useState("");
   const [contentType, setContentType] = useState<ContentType>("post");
@@ -112,6 +133,7 @@ export default function ContentPage() {
         if (!cancelled) {
           setRole(workspace.role ?? "");
           setItems(content.items ?? []);
+          setAudit(content.audit ?? []);
           setAnalytics(content.analytics ?? null);
         }
       } catch (loadError) {
@@ -337,6 +359,42 @@ export default function ContentPage() {
                 <div className="mt-4 min-w-[560px] space-y-2 text-sm">
                   {analytics.daily30.map((day) => <div className="grid grid-cols-[1fr_repeat(3,auto)] gap-4" key={day.date}><span className="text-muted">{day.date}</span><span>Views {day.views}</span><span>Clicks {day.clicks}</span><span>Redemptions {day.redemptions}</span></div>)}
                 </div>
+              </Card>
+            </section>
+          ) : null}
+          {["org_owner", "admin", "moderator"].includes(role) ? (
+            <section className="mt-8" aria-labelledby="content-audit-heading">
+              <h2 className="text-xl font-semibold text-white" id="content-audit-heading">Audit history</h2>
+              <p className="mt-1 text-sm text-muted">State-changing content actions for this business. Actor identifiers are shown without personal details.</p>
+              <Card className="mt-5 overflow-x-auto p-5">
+                {audit.length === 0 ? (
+                  <p className="text-sm text-muted">No content actions have been recorded yet.</p>
+                ) : (
+                  <div className="min-w-[680px] divide-y divide-white/10">
+                    <div className="grid grid-cols-[1.1fr_1.5fr_1fr_1fr_1fr] gap-4 border-b border-white/10 pb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                      <span>Action</span>
+                      <span>Actor</span>
+                      <span>Previous status</span>
+                      <span>New status</span>
+                      <span>Date and time</span>
+                    </div>
+                    {audit.map((entry) => {
+                      const content = items.find((item) => item.id === entry.content_id);
+                      return (
+                        <div className="grid grid-cols-[1.1fr_1.5fr_1fr_1fr_1fr] gap-4 py-3 text-sm" key={entry.id}>
+                          <div>
+                            <p className="font-medium capitalize text-white">{auditActionLabel(entry.action)}</p>
+                            <p className="mt-1 text-xs text-muted">{content?.title ?? "Content item"}</p>
+                          </div>
+                          <span className="text-muted">{auditActorLabel(entry.actor_id)}</span>
+                          <span className="text-muted">{entry.from_status ?? "—"}</span>
+                          <span className="text-muted">{entry.to_status ?? "—"}</span>
+                          <time className="text-muted" dateTime={entry.created_at}>{formatDate(entry.created_at)}</time>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </Card>
             </section>
           ) : null}

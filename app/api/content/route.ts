@@ -8,6 +8,7 @@ import { countContentAnalyticsEvents } from "@/lib/validation/contentAnalytics";
 import { countContentRedemptions } from "@/lib/validation/contentRedemption";
 import { buildContentAnalyticsDashboard } from "@/lib/validation/contentAnalytics";
 import { isContentPubliclyAvailable } from "@/lib/content/publication";
+import { recordContentAudit } from "@/lib/content/audit";
 
 const contentSelect = "id,business_id,content_type,title,body,starts_at,ends_at,publish_at,original_price,offer_price,discount_percentage,offer_code,publication_status,rejection_reason,image_path,submitted_at,published_at,created_by,created_at,updated_at";
 
@@ -59,7 +60,15 @@ export async function GET() {
       ? supabase.storage.from(CONTENT_IMAGE_BUCKET).getPublicUrl(item.image_path).data.publicUrl
       : null,
   }));
-  return NextResponse.json({ items, analytics: analyticsDashboard });
+  const audit = ["org_owner", "admin", "moderator"].includes(result.data.role)
+    ? await supabase
+      .from("content_audit_log")
+      .select("id,content_id,business_id,actor_id,action,from_status,to_status,created_at")
+      .eq("business_id", result.data.businessId)
+      .order("created_at", { ascending: false })
+    : { data: [], error: null };
+  if (audit.error) return NextResponse.json({ message: "Unable to load content audit history." }, { status: 503 });
+  return NextResponse.json({ items, analytics: analyticsDashboard, audit: audit.data ?? [] });
 }
 
 export async function POST(request: Request) {
@@ -111,7 +120,23 @@ export async function POST(request: Request) {
       await supabase.from("merchant_content").delete().eq("id", data.id);
       return NextResponse.json({ message: "Unable to record the content image." }, { status: 400 });
     }
+    const auditError = await recordContentAudit(supabase, {
+      action: "create",
+      actor_id: user.user.id,
+      business_id: result.data.businessId,
+      content_id: data.id,
+      to_status: "draft",
+    });
+    if (auditError) return NextResponse.json({ message: "Content was created, but audit history could not be recorded." }, { status: 503 });
     return NextResponse.json({ item: { ...update.data, image_url: supabase.storage.from(CONTENT_IMAGE_BUCKET).getPublicUrl(imagePath).data.publicUrl }, message: "Content created as Draft." }, { status: 201 });
   }
+  const auditError = await recordContentAudit(supabase, {
+    action: "create",
+    actor_id: user.user.id,
+    business_id: result.data.businessId,
+    content_id: data.id,
+    to_status: "draft",
+  });
+  if (auditError) return NextResponse.json({ message: "Content was created, but audit history could not be recorded." }, { status: 503 });
   return NextResponse.json({ item: { ...data, image_url: null }, message: "Content created as Draft." }, { status: 201 });
 }

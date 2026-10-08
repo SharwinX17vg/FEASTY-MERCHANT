@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   canApproveContent,
@@ -16,6 +17,7 @@ import {
 import { validateContent, validateRejectionReason } from "../lib/validation/content.ts";
 import { buildContentAnalyticsDashboard, calculateEngagementRate, countContentAnalyticsEvents, validateContentAnalyticsEvent } from "../lib/validation/contentAnalytics.ts";
 import { countContentRedemptions, validateOfferRedemption } from "../lib/validation/contentRedemption.ts";
+import { contentAuditActions, getContentEditAuditAction, recordContentAudit } from "../lib/content/audit.ts";
 import {
   MAX_CONTENT_IMAGE_SIZE,
   createContentImagePath,
@@ -112,6 +114,64 @@ test("validates scheduled publication dates and public availability", () => {
   assert.equal(isContentPubliclyAvailable("published", "2026-10-07T00:00:00.000Z", null, null, now), true);
   assert.equal(isContentPubliclyAvailable("approved", "2026-10-07T00:00:00.000Z", null, null, now), false);
   assert.equal(getContentPublicationLabel("published", "2026-10-09T00:00:00.000Z", now), "Scheduled");
+});
+
+test("maps content mutations to append-only audit actions", () => {
+  assert.deepEqual(contentAuditActions, [
+    "create",
+    "update",
+    "submit",
+    "resubmit",
+    "reject",
+    "approve",
+    "publish",
+    "schedule",
+    "unschedule",
+    "reschedule",
+    "unpublish",
+    "delete",
+    "archive",
+  ]);
+  assert.equal((contentAuditActions as readonly string[]).includes("view"), false);
+  assert.equal((contentAuditActions as readonly string[]).includes("click"), false);
+  assert.equal((contentAuditActions as readonly string[]).includes("redemption"), false);
+  assert.equal(getContentEditAuditAction(null, "2026-10-09T00:00:00.000Z"), "schedule");
+  assert.equal(getContentEditAuditAction("2026-10-09T00:00:00.000Z", null), "unschedule");
+  assert.equal(getContentEditAuditAction("2026-10-09T00:00:00.000Z", "2026-10-10T00:00:00.000Z"), "reschedule");
+  assert.equal(getContentEditAuditAction(null, null), "update");
+});
+
+test("records one scoped audit row with the authenticated actor", async () => {
+  let inserted: Record<string, unknown> | null = null;
+  const client = {
+    from(table: string) {
+      assert.equal(table, "content_audit_log");
+      return {
+        insert(values: Record<string, unknown>) {
+          inserted = values;
+          return Promise.resolve({ error: null });
+        },
+      };
+    },
+  } as unknown as SupabaseClient;
+
+  assert.equal(await recordContentAudit(client, {
+    action: "approve",
+    actor_id: "actor-1",
+    business_id: "business-1",
+    content_id: "content-1",
+    from_status: "pending_review",
+    to_status: "approved",
+  }), null);
+  assert.deepEqual(inserted, {
+    action: "approve",
+    actor_id: "actor-1",
+    business_id: "business-1",
+    content_id: "content-1",
+    details: {},
+    from_status: "pending_review",
+    to_status: "approved",
+  });
 });
 
 test("counts aggregate content analytics events", () => {
