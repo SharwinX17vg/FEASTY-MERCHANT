@@ -4,7 +4,6 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getValidatedWorkspaceContext } from "@/lib/workspace/context";
 import { validateContent } from "@/lib/validation/content";
 import { CONTENT_IMAGE_BUCKET, createContentImagePath, validateContentImage } from "@/lib/content/storage";
-import { getContentEditAuditAction, recordContentAudit } from "@/lib/content/audit";
 
 type RouteContext = { params: Promise<{ contentId: string }> };
 
@@ -62,15 +61,6 @@ export async function PUT(request: Request, context: RouteContext) {
     .select("*")
     .single();
   if (error || !data) return NextResponse.json({ message: "Unable to update content." }, { status: 400 });
-  const auditError = await recordContentAudit(supabase, {
-    action: getContentEditAuditAction(item.publish_at, data.publish_at),
-    actor_id: result.data.user.id,
-    business_id: result.data.businessId,
-    content_id: contentId,
-    from_status: item.publication_status,
-    to_status: data.publication_status,
-  });
-  if (auditError) return NextResponse.json({ message: "Content was updated, but audit history could not be recorded." }, { status: 503 });
   return NextResponse.json({
     item: {
       ...data,

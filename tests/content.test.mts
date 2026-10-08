@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   canApproveContent,
@@ -18,7 +17,7 @@ import {
 import { validateContent, validateRejectionReason } from "../lib/validation/content.ts";
 import { buildContentAnalyticsDashboard, calculateEngagementRate, countContentAnalyticsEvents, validateContentAnalyticsEvent } from "../lib/validation/contentAnalytics.ts";
 import { countContentRedemptions, validateOfferRedemption } from "../lib/validation/contentRedemption.ts";
-import { contentAuditActions, getContentEditAuditAction, recordContentAudit } from "../lib/content/audit.ts";
+import { contentAuditActions, getContentEditAuditAction } from "../lib/content/audit.ts";
 import {
   MAX_CONTENT_IMAGE_SIZE,
   createContentImagePath,
@@ -142,37 +141,26 @@ test("maps content mutations to append-only audit actions", () => {
   assert.equal(getContentEditAuditAction(null, null), "update");
 });
 
-test("records one scoped audit row with the authenticated actor", async () => {
-  let inserted: Record<string, unknown> | null = null;
-  const client = {
-    from(table: string) {
-      assert.equal(table, "content_audit_log");
-      return {
-        insert(values: Record<string, unknown>) {
-          inserted = values;
-          return Promise.resolve({ error: null });
-        },
-      };
-    },
-  } as unknown as SupabaseClient;
+test("database audit protection derives and validates audit events", () => {
+  const migration = readFileSync(
+    new URL("../supabase/migrations/20261008230000_merchant_content_audit_integrity.sql", import.meta.url),
+    "utf8",
+  );
 
-  assert.equal(await recordContentAudit(client, {
-    action: "approve",
-    actor_id: "actor-1",
-    business_id: "business-1",
-    content_id: "content-1",
-    from_status: "pending_review",
-    to_status: "approved",
-  }), null);
-  assert.deepEqual(inserted, {
-    action: "approve",
-    actor_id: "actor-1",
-    business_id: "business-1",
-    content_id: "content-1",
-    details: {},
-    from_status: "pending_review",
-    to_status: "approved",
-  });
+  assert.match(migration, /revoke insert on public\.content_audit_log from anon, authenticated/);
+  assert.match(migration, /auth\.uid\(\)/);
+  assert.match(migration, /can_manage_branch\(new\.business_id\)/);
+  assert.match(migration, /insert into public\.content_audit_log/);
+  assert.match(migration, /old\.publication_status = 'pending_review'/);
+  assert.match(migration, /new\.publication_status = 'approved'/);
+  assert.match(migration, /new\.publication_status = 'published'/);
+  assert.match(migration, /new\.publish_at > timezone\('utc', now\(\)\)/);
+  assert.match(migration, /jsonb_build_object\('rejection_reason'/);
+  assert.match(migration, /audit_action := 'create'/);
+  assert.match(migration, /audit_action := 'update'/);
+  assert.match(migration, /audit_action := case/);
+  assert.match(migration, /merchant_content_audit_integrity/);
+  assert.match(migration, /drop policy if exists content_audit_log_insert_member/);
 });
 
 test("counts aggregate content analytics events", () => {
