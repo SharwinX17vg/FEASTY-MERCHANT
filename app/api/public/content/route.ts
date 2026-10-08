@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const supabase = await getSupabaseServerClient();
   const { data, error } = await supabase
     .from("merchant_content")
-    .select("id,business_id,content_type,title,body,starts_at,ends_at,published_at,image_path")
+    .select("id,business_id,content_type,title,body,starts_at,ends_at,original_price,offer_price,discount_percentage,offer_code,published_at,image_path")
     .eq("business_id", businessId)
     .eq("publication_status", "published")
     .order("published_at", { ascending: false });

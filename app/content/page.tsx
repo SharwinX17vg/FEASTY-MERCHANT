@@ -16,6 +16,10 @@ type PublicContentItem = {
   body: string;
   starts_at: string | null;
   ends_at: string | null;
+  original_price: number | null;
+  offer_price: number | null;
+  discount_percentage: number | null;
+  offer_code: string | null;
   published_at: string | null;
   image_url: string | null;
 };
@@ -71,6 +75,14 @@ function ContentCard({ item }: { item: PublicContentItem }) {
         </div>
         <h2 className="mt-4 text-2xl font-semibold tracking-tight text-white">{item.title}</h2>
         <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-muted">{item.body}</p>
+        {item.content_type === "offer" ? (
+          <div className="mt-5 flex flex-wrap gap-2 text-sm font-medium text-primary">
+            {item.original_price !== null ? <span>Was {item.original_price}</span> : null}
+            {item.offer_price !== null ? <span>Now {item.offer_price}</span> : null}
+            {item.discount_percentage !== null ? <span>{item.discount_percentage}% off</span> : null}
+            {item.offer_code ? <span>Code: {item.offer_code}</span> : null}
+          </div>
+        ) : null}
       </div>
     </Card>
   );

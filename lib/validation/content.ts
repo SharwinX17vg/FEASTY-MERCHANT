@@ -7,6 +7,10 @@ export type ContentInput = {
   body?: unknown;
   starts_at?: unknown;
   ends_at?: unknown;
+  original_price?: unknown;
+  offer_price?: unknown;
+  discount_percentage?: unknown;
+  offer_code?: unknown;
 };
 
 export type ContentValues = {
@@ -15,6 +19,10 @@ export type ContentValues = {
   body: string;
   starts_at: string | null;
   ends_at: string | null;
+  original_price: number | null;
+  offer_price: number | null;
+  discount_percentage: number | null;
+  offer_code: string | null;
 };
 
 export function validateContent(input: ContentInput) {
@@ -25,6 +33,10 @@ export function validateContent(input: ContentInput) {
     body: String(input.body ?? "").trim(),
     starts_at: String(input.starts_at ?? "").trim() || null,
     ends_at: String(input.ends_at ?? "").trim() || null,
+    original_price: input.original_price === undefined || String(input.original_price).trim() === "" ? null : Number(input.original_price),
+    offer_price: input.offer_price === undefined || String(input.offer_price).trim() === "" ? null : Number(input.offer_price),
+    discount_percentage: input.discount_percentage === undefined || String(input.discount_percentage).trim() === "" ? null : Number(input.discount_percentage),
+    offer_code: String(input.offer_code ?? "").trim() || null,
   } satisfies ContentValues;
   const errors: Partial<Record<keyof ContentValues, string>> = {};
 
@@ -44,6 +56,29 @@ export function validateContent(input: ContentInput) {
   if (values.ends_at && endsAt === null) errors.ends_at = "Enter a valid end date.";
   if (startsAt !== null && endsAt !== null && startsAt >= endsAt) {
     errors.ends_at = "End date must be after the start date.";
+  }
+
+  if (values.content_type === "post") {
+    values.original_price = null;
+    values.offer_price = null;
+    values.discount_percentage = null;
+    values.offer_code = null;
+  } else {
+    if (values.original_price !== null && (!Number.isFinite(values.original_price) || values.original_price <= 0)) {
+      errors.original_price = "Original price must be greater than 0.";
+    }
+    if (values.offer_price !== null && (!Number.isFinite(values.offer_price) || values.offer_price < 0)) {
+      errors.offer_price = "Offer price must be 0 or greater.";
+    }
+    if (values.original_price !== null && values.offer_price !== null && values.offer_price > values.original_price) {
+      errors.offer_price = "Offer price cannot be greater than the original price.";
+    }
+    if (values.discount_percentage !== null && (!Number.isFinite(values.discount_percentage) || values.discount_percentage < 0 || values.discount_percentage > 100)) {
+      errors.discount_percentage = "Discount must be between 0 and 100.";
+    }
+    if (values.offer_code !== null && (values.offer_code.length < 1 || values.offer_code.length > 50)) {
+      errors.offer_code = "Offer code must be 1 to 50 characters.";
+    }
   }
 
   return { errors, values };

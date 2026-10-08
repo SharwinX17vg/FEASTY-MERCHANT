@@ -5,7 +5,7 @@ import { getValidatedWorkspaceContext } from "@/lib/workspace/context";
 import { validateContent } from "@/lib/validation/content";
 import { CONTENT_IMAGE_BUCKET, createContentImagePath, validateContentImage } from "@/lib/content/storage";
 
-const contentSelect = "id,business_id,content_type,title,body,starts_at,ends_at,publication_status,rejection_reason,image_path,submitted_at,published_at,created_by,created_at,updated_at";
+const contentSelect = "id,business_id,content_type,title,body,starts_at,ends_at,original_price,offer_price,discount_percentage,offer_code,publication_status,rejection_reason,image_path,submitted_at,published_at,created_by,created_at,updated_at";
 
 export async function GET() {
   const result = await getValidatedWorkspaceContext();

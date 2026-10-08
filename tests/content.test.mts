@@ -23,6 +23,10 @@ test("validates and normalizes merchant content", () => {
     content_type: "offer",
     title: "  Weekend special ",
     body: "Two-for-one coffee.",
+    original_price: "10",
+    offer_price: "7.5",
+    discount_percentage: "25",
+    offer_code: "WEEKEND",
   });
 
   test("only currently active content is eligible for public display", () => {
@@ -35,6 +39,10 @@ test("validates and normalizes merchant content", () => {
   assert.deepEqual(result.errors, {});
   assert.equal(result.values.title, "Weekend special");
   assert.equal(result.values.starts_at, null);
+  assert.equal(result.values.original_price, 10);
+  assert.equal(result.values.offer_price, 7.5);
+  assert.equal(result.values.discount_percentage, 25);
+  assert.equal(result.values.offer_code, "WEEKEND");
 });
 
 test("rejects invalid content and date ranges", () => {
@@ -49,6 +57,35 @@ test("rejects invalid content and date ranges", () => {
   assert.equal(result.errors.title, "Title must be between 2 and 160 characters.");
   assert.equal(result.errors.body, "Content must be between 1 and 5,000 characters.");
   assert.equal(result.errors.ends_at, "End date must be after the start date.");
+});
+
+test("rejects nonsensical offer details", () => {
+  const result = validateContent({
+    content_type: "offer",
+    title: "Offer",
+    body: "Save now",
+    original_price: "0",
+    offer_price: "20",
+    discount_percentage: "101",
+    offer_code: "x".repeat(51),
+  });
+  assert.equal(result.errors.original_price, "Original price must be greater than 0.");
+  assert.equal(result.errors.offer_price, "Offer price cannot be greater than the original price.");
+  assert.equal(result.errors.discount_percentage, "Discount must be between 0 and 100.");
+  assert.equal(result.errors.offer_code, "Offer code must be 1 to 50 characters.");
+});
+
+test("post content ignores offer-only fields", () => {
+  const result = validateContent({
+    content_type: "post",
+    title: "Update",
+    body: "Opening soon",
+    original_price: "10",
+    offer_code: "SAVE",
+  });
+  assert.deepEqual(result.errors, {});
+  assert.equal(result.values.original_price, null);
+  assert.equal(result.values.offer_code, null);
 });
 
 test("content publication follows merchant review workflow", () => {

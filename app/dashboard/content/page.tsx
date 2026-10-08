@@ -21,6 +21,10 @@ type ContentItem = {
   body: string;
   starts_at: string | null;
   ends_at: string | null;
+  original_price: number | null;
+  offer_price: number | null;
+  discount_percentage: number | null;
+  offer_code: string | null;
   publication_status: string;
   submitted_at: string | null;
   published_at: string | null;
@@ -57,6 +61,12 @@ export default function ContentPage() {
   const [contentType, setContentType] = useState<ContentType>("post");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [startsAt, setStartsAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
+  const [originalPrice, setOriginalPrice] = useState("");
+  const [offerPrice, setOfferPrice] = useState("");
+  const [discountPercentage, setDiscountPercentage] = useState("");
+  const [offerCode, setOfferCode] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -66,6 +76,12 @@ export default function ContentPage() {
   const [editType, setEditType] = useState<ContentType>("post");
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
+  const [editStartsAt, setEditStartsAt] = useState("");
+  const [editEndsAt, setEditEndsAt] = useState("");
+  const [editOriginalPrice, setEditOriginalPrice] = useState("");
+  const [editOfferPrice, setEditOfferPrice] = useState("");
+  const [editDiscountPercentage, setEditDiscountPercentage] = useState("");
+  const [editOfferCode, setEditOfferCode] = useState("");
   const [editImage, setEditImage] = useState<File | null>(null);
   const [removeEditImage, setRemoveEditImage] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -109,6 +125,12 @@ export default function ContentPage() {
       formData.set("content_type", contentType);
       formData.set("title", title);
       formData.set("body", body);
+      formData.set("starts_at", startsAt);
+      formData.set("ends_at", endsAt);
+      formData.set("original_price", originalPrice);
+      formData.set("offer_price", offerPrice);
+      formData.set("discount_percentage", discountPercentage);
+      formData.set("offer_code", offerCode);
       if (image) formData.set("image", image);
       const response = await fetch("/api/content", {
         method: "POST",
@@ -122,6 +144,12 @@ export default function ContentPage() {
       setItems((current) => [result.item as ContentItem, ...current]);
       setTitle("");
       setBody("");
+      setStartsAt("");
+      setEndsAt("");
+      setOriginalPrice("");
+      setOfferPrice("");
+      setDiscountPercentage("");
+      setOfferCode("");
       setImage(null);
       setMessage(result.message ?? "Content saved.");
     } catch {
@@ -136,6 +164,12 @@ export default function ContentPage() {
     setEditType(item.content_type);
     setEditTitle(item.title);
     setEditBody(item.body);
+    setEditStartsAt(item.starts_at ? item.starts_at.slice(0, 16) : "");
+    setEditEndsAt(item.ends_at ? item.ends_at.slice(0, 16) : "");
+    setEditOriginalPrice(item.original_price === null ? "" : String(item.original_price));
+    setEditOfferPrice(item.offer_price === null ? "" : String(item.offer_price));
+    setEditDiscountPercentage(item.discount_percentage === null ? "" : String(item.discount_percentage));
+    setEditOfferCode(item.offer_code ?? "");
     setEditImage(null);
     setRemoveEditImage(false);
     setError("");
@@ -151,6 +185,12 @@ export default function ContentPage() {
       formData.set("content_type", editType);
       formData.set("title", editTitle);
       formData.set("body", editBody);
+      formData.set("starts_at", editStartsAt);
+      formData.set("ends_at", editEndsAt);
+      formData.set("original_price", editOriginalPrice);
+      formData.set("offer_price", editOfferPrice);
+      formData.set("discount_percentage", editDiscountPercentage);
+      formData.set("offer_code", editOfferCode);
       formData.set("remove_image", String(removeEditImage));
       if (editImage) formData.set("image", editImage);
       const response = await fetch(`/api/content/${item.id}`, {
@@ -264,6 +304,18 @@ export default function ContentPage() {
                   value={body}
                 />
               </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input label="Starts (optional)" onChange={(event) => setStartsAt(event.target.value)} type="datetime-local" value={startsAt} />
+                <Input label="Ends (optional)" onChange={(event) => setEndsAt(event.target.value)} type="datetime-local" value={endsAt} />
+              </div>
+              {contentType === "offer" ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input label="Original price (optional)" min="0" onChange={(event) => setOriginalPrice(event.target.value)} step="0.01" type="number" value={originalPrice} />
+                  <Input label="Offer price (optional)" min="0" onChange={(event) => setOfferPrice(event.target.value)} step="0.01" type="number" value={offerPrice} />
+                  <Input label="Discount % (optional)" max="100" min="0" onChange={(event) => setDiscountPercentage(event.target.value)} step="0.01" type="number" value={discountPercentage} />
+                  <Input label="Offer code (optional)" onChange={(event) => setOfferCode(event.target.value)} value={offerCode} />
+                </div>
+              ) : null}
               <label className="block space-y-2 text-sm font-medium text-foreground">
                 Image (optional)
                 <input
@@ -274,6 +326,18 @@ export default function ContentPage() {
                 />
                 <span className="text-xs text-muted">JPG, PNG, or WEBP up to 5 MB.</span>
               </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input label="Starts (optional)" onChange={(event) => setEditStartsAt(event.target.value)} type="datetime-local" value={editStartsAt} />
+                <Input label="Ends (optional)" onChange={(event) => setEditEndsAt(event.target.value)} type="datetime-local" value={editEndsAt} />
+              </div>
+              {editType === "offer" ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input label="Original price (optional)" min="0" onChange={(event) => setEditOriginalPrice(event.target.value)} step="0.01" type="number" value={editOriginalPrice} />
+                  <Input label="Offer price (optional)" min="0" onChange={(event) => setEditOfferPrice(event.target.value)} step="0.01" type="number" value={editOfferPrice} />
+                  <Input label="Discount % (optional)" max="100" min="0" onChange={(event) => setEditDiscountPercentage(event.target.value)} step="0.01" type="number" value={editDiscountPercentage} />
+                  <Input label="Offer code (optional)" onChange={(event) => setEditOfferCode(event.target.value)} value={editOfferCode} />
+                </div>
+              ) : null}
               <PrimaryButton disabled={saving} onClick={() => void createContent()}>
                 {saving ? "Saving…" : "Save draft"}
               </PrimaryButton>
@@ -340,6 +404,14 @@ export default function ContentPage() {
                       <>
                         {item.image_url ? <img alt="" className="mt-4 max-h-64 w-full rounded-xl object-cover" src={item.image_url} /> : null}
                         <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-muted">{item.body}</p>
+                        {item.content_type === "offer" ? (
+                          <div className="mt-4 flex flex-wrap gap-2 text-sm text-primary">
+                            {item.original_price !== null ? <span>Was {item.original_price}</span> : null}
+                            {item.offer_price !== null ? <span>Now {item.offer_price}</span> : null}
+                            {item.discount_percentage !== null ? <span>{item.discount_percentage}% off</span> : null}
+                            {item.offer_code ? <span>Code: {item.offer_code}</span> : null}
+                          </div>
+                        ) : null}
                       </>
                     )}
                     {item.publication_status === "rejected" && item.rejection_reason ? (
