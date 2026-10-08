@@ -13,6 +13,7 @@ import {
   getContentPublicationLabel,
 } from "@/lib/content/publication";
 import { type ContentType } from "@/lib/validation/content";
+import type { ContentAnalyticsDashboard } from "@/lib/validation/contentAnalytics";
 
 type ContentItem = {
   id: string;
@@ -39,6 +40,7 @@ type ContentItem = {
 
 type ContentResponse = {
   items?: ContentItem[];
+  analytics?: ContentAnalyticsDashboard;
   message?: string;
 };
 
@@ -60,6 +62,7 @@ function dateRange(item: ContentItem) {
 
 export default function ContentPage() {
   const [items, setItems] = useState<ContentItem[]>([]);
+  const [analytics, setAnalytics] = useState<ContentAnalyticsDashboard | null>(null);
   const [role, setRole] = useState("");
   const [contentType, setContentType] = useState<ContentType>("post");
   const [title, setTitle] = useState("");
@@ -106,6 +109,7 @@ export default function ContentPage() {
         if (!cancelled) {
           setRole(workspace.role ?? "");
           setItems(content.items ?? []);
+          setAnalytics(content.analytics ?? null);
         }
       } catch (loadError) {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Unable to load content.");
@@ -280,6 +284,55 @@ export default function ContentPage() {
             eyebrow="FEASTYMAP content"
             title="Content management"
           />
+          {analytics ? (
+            <section className="mt-8" aria-labelledby="content-analytics-heading">
+              <h2 className="text-xl font-semibold text-white" id="content-analytics-heading">Content analytics</h2>
+              <p className="mt-1 text-sm text-muted">Published and currently active content, measured over the last 30 days.</p>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  ["Total views", analytics.summary.total_views],
+                  ["Total clicks", analytics.summary.total_clicks],
+                  ["Total redemptions", analytics.summary.total_redemptions],
+                  ["Engagement rate", `${analytics.summary.engagement_rate}%`],
+                ].map(([label, value]) => (
+                  <Card className="p-5" key={String(label)}>
+                    <p className="text-sm text-muted">{label}</p>
+                    <p className="mt-2 text-3xl font-semibold text-white">{value}</p>
+                  </Card>
+                ))}
+              </div>
+              <div className="mt-5 grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+                <Card className="p-5">
+                  <h3 className="font-semibold text-white">Daily activity</h3>
+                  <p className="mt-1 text-xs text-muted">Last 7 days, with the last 30 days available below.</p>
+                  <div className="mt-4 space-y-2">
+                    {analytics.daily7.map((day) => (
+                      <div className="grid grid-cols-[1fr_repeat(3,auto)] gap-4 text-sm" key={day.date}>
+                        <span className="text-muted">{day.date}</span><span>V {day.views}</span><span>C {day.clicks}</span><span>R {day.redemptions}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+                <Card className="p-5">
+                  <h3 className="font-semibold text-white">Best-performing published content</h3>
+                  <div className="mt-4 space-y-3">
+                    {analytics.best_performing.length === 0 ? <p className="text-sm text-muted">No active published content yet.</p> : analytics.best_performing.map((item) => (
+                      <div className="border-b border-white/10 pb-3 last:border-0 last:pb-0" key={item.content_id}>
+                        <p className="font-medium text-foreground">{item.title}</p>
+                        <p className="mt-1 text-xs text-muted">Views {item.views} · Clicks {item.clicks} · Redemptions {item.redemptions}</p>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+              <Card className="mt-5 overflow-x-auto p-5">
+                <h3 className="font-semibold text-white">Daily activity · last 30 days</h3>
+                <div className="mt-4 min-w-[560px] space-y-2 text-sm">
+                  {analytics.daily30.map((day) => <div className="grid grid-cols-[1fr_repeat(3,auto)] gap-4" key={day.date}><span className="text-muted">{day.date}</span><span>Views {day.views}</span><span>Clicks {day.clicks}</span><span>Redemptions {day.redemptions}</span></div>)}
+                </div>
+              </Card>
+            </section>
+          ) : null}
           {error ? <DashboardNotice kind="error">{error}</DashboardNotice> : null}
           {message ? <DashboardNotice kind="success">{message}</DashboardNotice> : null}
 

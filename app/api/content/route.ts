@@ -6,6 +6,8 @@ import { validateContent } from "@/lib/validation/content";
 import { CONTENT_IMAGE_BUCKET, createContentImagePath, validateContentImage } from "@/lib/content/storage";
 import { countContentAnalyticsEvents } from "@/lib/validation/contentAnalytics";
 import { countContentRedemptions } from "@/lib/validation/contentRedemption";
+import { buildContentAnalyticsDashboard } from "@/lib/validation/contentAnalytics";
+import { isContentCurrentlyActive } from "@/lib/content/publication";
 
 const contentSelect = "id,business_id,content_type,title,body,starts_at,ends_at,original_price,offer_price,discount_percentage,offer_code,publication_status,rejection_reason,image_path,submitted_at,published_at,created_by,created_at,updated_at";
 
@@ -21,11 +23,12 @@ export async function GET() {
     .eq("business_id", result.data.businessId)
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ message: "Unable to load content." }, { status: 503 });
-  const publishedIds = (data ?? []).filter((item) => item.publication_status === "published").map((item) => item.id);
+  const activePublished = (data ?? []).filter((item) => item.publication_status === "published" && isContentCurrentlyActive(item.starts_at, item.ends_at));
+  const publishedIds = activePublished.map((item) => item.id);
   const analytics = publishedIds.length
     ? await supabase
       .from("merchant_content_analytics")
-      .select("content_id,event_type,event_count")
+      .select("content_id,event_date,event_type,event_count")
       .in("content_id", publishedIds)
     : { data: [], error: null };
   if (analytics.error) return NextResponse.json({ message: "Unable to load content analytics." }, { status: 503 });
@@ -36,11 +39,16 @@ export async function GET() {
   const redemptions = publishedOfferIds.length
     ? await supabase
       .from("merchant_content_offer_redemptions")
-      .select("content_id,redemption_count")
+      .select("content_id,redemption_date,redemption_count")
       .in("content_id", publishedOfferIds)
     : { data: [], error: null };
   if (redemptions.error) return NextResponse.json({ message: "Unable to load offer redemptions." }, { status: 503 });
   const redemptionCounts = countContentRedemptions(redemptions.data ?? []);
+  const analyticsDashboard = buildContentAnalyticsDashboard(
+    activePublished.map((item) => ({ id: item.id, title: item.title, content_type: item.content_type })),
+    analytics.data ?? [],
+    redemptions.data ?? [],
+  );
   const items = (data ?? []).map((item) => ({
     ...item,
     ...(item.publication_status === "published" ? analyticsCounts[item.id] ?? { view_count: 0, click_count: 0 } : {}),
@@ -51,7 +59,7 @@ export async function GET() {
       ? supabase.storage.from(CONTENT_IMAGE_BUCKET).getPublicUrl(item.image_path).data.publicUrl
       : null,
   }));
-  return NextResponse.json({ items });
+  return NextResponse.json({ items, analytics: analyticsDashboard });
 }
 
 export async function POST(request: Request) {

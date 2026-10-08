@@ -12,7 +12,7 @@ import {
   isContentCurrentlyActive,
 } from "../lib/content/publication.ts";
 import { validateContent, validateRejectionReason } from "../lib/validation/content.ts";
-import { countContentAnalyticsEvents, validateContentAnalyticsEvent } from "../lib/validation/contentAnalytics.ts";
+import { buildContentAnalyticsDashboard, calculateEngagementRate, countContentAnalyticsEvents, validateContentAnalyticsEvent } from "../lib/validation/contentAnalytics.ts";
 import { countContentRedemptions, validateOfferRedemption } from "../lib/validation/contentRedemption.ts";
 import {
   MAX_CONTENT_IMAGE_SIZE,
@@ -105,6 +105,24 @@ test("counts aggregate content analytics events", () => {
   ]), {
     "content-1": { view_count: 5, click_count: 1 },
     "content-2": { view_count: 0, click_count: 4 },
+  });
+
+  test("calculates engagement rate and dashboard aggregates", () => {
+    assert.equal(calculateEngagementRate(0, 4), 0);
+    assert.equal(calculateEngagementRate(8, 2), 25);
+    const dashboard = buildContentAnalyticsDashboard(
+      [{ id: "content-1", title: "Offer", content_type: "offer" }],
+      [
+        { content_id: "content-1", event_date: "2026-10-08", event_type: "view", event_count: 8 },
+        { content_id: "content-1", event_date: "2026-10-08", event_type: "click", event_count: 2 },
+      ],
+      [{ content_id: "content-1", redemption_date: "2026-10-08", redemption_count: 1 }],
+      new Date("2026-10-08T12:00:00.000Z"),
+    );
+    assert.deepEqual(dashboard.summary, { total_views: 8, total_clicks: 2, total_redemptions: 1, engagement_rate: 25 });
+    assert.equal(dashboard.daily7.at(-1)?.views, 8);
+    assert.equal(dashboard.daily30.length, 30);
+    assert.equal(dashboard.best_performing[0]?.content_id, "content-1");
   });
 
   test("validates active coded offer redemption conditions", () => {
