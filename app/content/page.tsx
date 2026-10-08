@@ -48,10 +48,18 @@ async function recordContentAnalytics(contentId: string, eventType: "view" | "cl
   });
 }
 
-async function redeemContentOffer(contentId: string) {
+async function redeemContentOffer(contentId: string, offerCode: string) {
+  const tokenResponse = await fetch(`/api/public/content/${encodeURIComponent(contentId)}/redeem`, {
+    method: "GET",
+  });
+  const tokenResult = (await tokenResponse.json()) as { nonce?: string; message?: string };
+  if (!tokenResponse.ok || !tokenResult.nonce) {
+    throw new Error(tokenResult.message ?? "This offer is not currently available.");
+  }
   const response = await fetch(`/api/public/content/${encodeURIComponent(contentId)}/redeem`, {
     method: "POST",
-    keepalive: true,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ offer_code: offerCode, nonce: tokenResult.nonce }),
   });
   const result = (await response.json()) as { message?: string };
   if (!response.ok) throw new Error(result.message ?? "This offer is not currently available.");
@@ -78,13 +86,15 @@ function activeDates(item: PublicContentItem) {
 function ContentCard({ item }: { item: PublicContentItem }) {
   const [redemptionMessage, setRedemptionMessage] = useState("");
   const [redemptionError, setRedemptionError] = useState("");
+  const [hasRedeemed, setHasRedeemed] = useState(false);
 
   async function handleUseOffer() {
     setRedemptionMessage("");
     setRedemptionError("");
     await recordContentAnalytics(item.id, "click");
     try {
-      await redeemContentOffer(item.id);
+      await redeemContentOffer(item.id, item.offer_code ?? "");
+      setHasRedeemed(true);
       setRedemptionMessage("Offer used. Show the code at the business.");
     } catch (error) {
       setRedemptionError(error instanceof Error ? error.message : "This offer is not currently available.");
@@ -119,10 +129,11 @@ function ContentCard({ item }: { item: PublicContentItem }) {
         ) : null}
         <button
           className="mt-5 rounded-xl border border-primary/40 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
+          disabled={hasRedeemed}
           onClick={() => void (item.content_type === "offer" && item.offer_code ? handleUseOffer() : recordContentAnalytics(item.id, "click"))}
           type="button"
         >
-          {item.content_type === "offer" && item.offer_code ? "Use Offer" : item.content_type === "offer" ? "View offer" : "View content"}
+          {hasRedeemed ? "Offer used" : item.content_type === "offer" && item.offer_code ? "Use Offer" : item.content_type === "offer" ? "View offer" : "View content"}
         </button>
         {redemptionMessage ? <p className="mt-3 text-sm text-primary">{redemptionMessage}</p> : null}
         {redemptionError ? <p className="mt-3 text-sm text-red-200">{redemptionError}</p> : null}

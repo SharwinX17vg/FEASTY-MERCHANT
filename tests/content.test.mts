@@ -204,8 +204,24 @@ test("counts aggregate content analytics events", () => {
     assert.deepEqual(validateOfferRedemption(offer, now), { valid: true });
     assert.equal(validateOfferRedemption({ ...offer, ends_at: "2026-10-08T00:00:00.000Z" }, now).valid, false);
     assert.equal(validateOfferRedemption({ ...offer, publication_status: "draft" }, now).valid, false);
+    assert.equal(validateOfferRedemption({ ...offer, publish_at: "2026-10-08T01:00:00.000Z" }, now).valid, false);
     assert.equal(validateOfferRedemption({ ...offer, offer_code: null }, now).valid, false);
     assert.equal(validateOfferRedemption({ ...offer, content_type: "post" }, now).valid, false);
+  });
+
+  test("protects offer redemptions with validated codes and one-time nonces", () => {
+    const migration = readFileSync(
+      new URL("../supabase/migrations/20261008240000_merchant_content_offer_redemption_integrity.sql", import.meta.url),
+      "utf8",
+    );
+    assert.match(migration, /create table public\.merchant_content_offer_redemption_nonces/);
+    assert.match(migration, /expires_at > timezone\('utc', now\(\)\)/);
+    assert.match(migration, /used_at is null/);
+    assert.match(migration, /set used_at = timezone\('utc', now\(\)\)/);
+    assert.match(migration, /offer_code = btrim\(p_offer_code\)/);
+    assert.match(migration, /publish_at is null or publish_at <= timezone\('utc', now\(\)\)/);
+    assert.match(migration, /grant execute on function public\.record_content_offer_redemption\(uuid, text, uuid\) to anon, authenticated/);
+    assert.match(migration, /revoke all on function public\.record_content_offer_redemption\(uuid\) from public/);
   });
 
   test("counts aggregate offer redemptions", () => {
