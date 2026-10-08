@@ -18,6 +18,7 @@ import { validateContent, validateRejectionReason } from "../lib/validation/cont
 import { buildContentAnalyticsDashboard, calculateEngagementRate, countContentAnalyticsEvents, validateContentAnalyticsEvent } from "../lib/validation/contentAnalytics.ts";
 import { countContentRedemptions, validateOfferRedemption } from "../lib/validation/contentRedemption.ts";
 import { contentAuditActions, getContentEditAuditAction } from "../lib/content/audit.ts";
+import { mapPublicDiscoveryContent, parseDiscoveryPagination } from "../lib/public/discovery.ts";
 import {
   MAX_CONTENT_IMAGE_SIZE,
   createContentImagePath,
@@ -231,6 +232,65 @@ test("counts aggregate content analytics events", () => {
       { content_id: "content-2", redemption_count: 1 },
     ]), { "content-1": 5, "content-2": 1 });
   });
+});
+
+test("maps the bounded public discovery contract without private workflow fields", () => {
+  assert.deepEqual(parseDiscoveryPagination(new URLSearchParams("page=2&limit=50")), { page: 2, limit: 50 });
+  assert.match(parseDiscoveryPagination(new URLSearchParams("limit=51")).error ?? "", /between 1 and 50/);
+
+  const base = {
+    id: "content-1",
+    business_id: "business-1",
+    title: "Live offer",
+    body: "Save today",
+    content_type: "offer" as const,
+    image_path: "private/path.webp",
+    starts_at: "2026-10-07T00:00:00.000Z",
+    ends_at: "2026-10-09T00:00:00.000Z",
+    publish_at: "2026-10-07T00:00:00.000Z",
+    publication_status: "published",
+    original_price: 10,
+    offer_price: 8,
+    discount_percentage: 20,
+    offer_code: "SAVE20",
+  };
+  assert.deepEqual(
+    mapPublicDiscoveryContent(base, "BIZ-001", "https://cdn.example.test/offer.webp", new Date("2026-10-08T00:00:00.000Z")),
+    {
+      public_id: "content-1",
+      business_public_id: "BIZ-001",
+      title: "Live offer",
+      description: "Save today",
+      content_type: "offer",
+      image_url: "https://cdn.example.test/offer.webp",
+      starts_at: base.starts_at,
+      ends_at: base.ends_at,
+      offer: {
+        original_price: 10,
+        offer_price: 8,
+        discount_percentage: 20,
+        offer_code: "SAVE20",
+      },
+    },
+  );
+  assert.equal(
+    mapPublicDiscoveryContent(
+      { ...base, publication_status: "draft" },
+      "BIZ-001",
+      null,
+      new Date("2026-10-08T00:00:00.000Z"),
+    ),
+    null,
+  );
+  assert.equal(
+    mapPublicDiscoveryContent(
+      { ...base, publish_at: "2026-10-09T00:00:00.000Z" },
+      "BIZ-001",
+      null,
+      new Date("2026-10-08T00:00:00.000Z"),
+    ),
+    null,
+  );
 });
 
 test("content publication follows merchant review workflow", () => {
