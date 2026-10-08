@@ -1,72 +1,231 @@
-# FEASTY MERCHANT
+# FEASTY
 
-FEASTY MERCHANT is the merchant-facing Next.js application in the FEASTY
-ecosystem. The current Day 1 foundation provides responsive UI routes, reusable
-layout and form primitives, route loading/error boundaries, and Supabase client
-scaffolding without connected authentication or backend workflows.
+FEASTY is a technology-driven food and business discovery ecosystem currently under active development.
 
-## Project folders
+The project is designed to connect merchants, businesses, customers, maps, intelligent services, and secure digital technologies through a unified platform.
 
-- `app/` - Next.js App Router routes, layouts, and route-level files.
-- `components/` - Reusable UI components shared across routes.
-- `lib/` - Shared low-level libraries and application configuration.
-- `types/` - Shared TypeScript type definitions.
-- `services/` - Modules that will coordinate external or backend operations.
-- `hooks/` - Reusable React hooks for shared client-side behavior.
-- `utils/` - Small, reusable, domain-agnostic helper functions.
-- `public/` - Static assets served directly by Next.js.
-- `docs/` - Project documentation and architecture notes.
+## Project Status
 
-See [docs/PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md) for the planned
-responsibilities and boundaries of each folder. See
-[docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) for the intentionally
-unconnected Supabase foundation.
+FEASTY is currently under development.
 
-## Getting Started
+The ecosystem is being actively built, integrated, tested, and improved. Some components and technologies are already implemented, while other capabilities are still under development or planned for future releases.
 
-First, run the development server:
+This repository represents an evolving development version and should not be considered the final production release.
+
+## FEASTY Ecosystem
+
+FEASTY is being developed as a connected ecosystem with multiple components.
+
+### FEASTY MERCHANT
+
+FEASTY MERCHANT is the merchant and business management platform.
+
+It is being developed to support:
+
+- Merchant and business onboarding
+- Business and branch management
+- Operating hours
+- Business content
+- Offers and promotions
+- Content publishing workflows
+- Approval and moderation
+- Analytics
+- Offer redemption
+- Role-based access control
+- Secure business and branch data management
+- Public discovery APIs
+
+FEASTY MERCHANT acts as the source of truth for merchant-owned business, branch, content, and offer data.
+
+### FEASTYMAP
+
+FEASTYMAP is the business discovery and map component of the FEASTY ecosystem.
+
+It allows users to discover businesses and places through map-based and location-based experiences.
+
+FEASTYMAP consumes published public Merchant data through the Merchant API rather than maintaining a separate merchant database.
+
+The integration follows this architecture:
+
+FEASTY MERCHANT
+|
+v
+Public Merchant API
+|
+v
+FEASTYMAP API Proxy
+|
+v
+Merchant Adapter
+|
+v
+Normalized FEASTYMAP Data
+|
+v
+Map and Discovery Interface
+
+Merchant-owned data remains controlled by FEASTY MERCHANT.
+
+## Technology Stack
+
+### Frontend
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Leaflet
+- OpenStreetMap
+
+### Backend and Database
+
+- Next.js API Routes
+- REST APIs
+- Supabase
+- PostgreSQL
+- Row Level Security (RLS)
+- Authentication and Authorization
+
+### Development and Engineering
+
+- Git
+- GitHub
+- Automated Testing
+- Type Checking
+- Linting
+- Build Validation
+- API Validation
+- Security-focused Development
+
+## Artificial Intelligence and Machine Learning
+
+AI and machine learning are part of the long-term FEASTY ecosystem.
+
+The project is being developed toward intelligent capabilities such as:
+
+- AI-assisted discovery
+- Intelligent recommendations
+- Personalization
+- Machine learning integrations
+- Intelligent automation
+
+These capabilities are being developed progressively and may change as the ecosystem evolves.
+
+## ScratchAI
+
+ScratchAI is an evolving technology component within the wider FEASTY ecosystem.
+
+It is currently under development and is intended to contribute to the intelligent capabilities of the platform.
+
+Its implementation and integration will continue to evolve as development progresses.
+
+## Cybersecurity
+
+Cybersecurity is a major focus of the FEASTY ecosystem.
+
+Security-focused development includes:
+
+- Authentication and authorization
+- Role-based access control
+- Row Level Security
+- Business and branch data isolation
+- Input validation
+- Runtime API response validation
+- Secure public API design
+- Audit logging
+- Secure offer redemption
+- Protection against unauthorized data mutations
+- Server-side handling of private credentials
+- Protection of private data
+- Security hardening and abuse prevention
+
+Security is treated as an ongoing part of development rather than a separate final-stage feature.
+
+## Blockchain
+
+Blockchain is part of the future technology exploration of the FEASTY ecosystem.
+
+Potential applications are being explored in areas such as:
+
+- Data verification
+- Digital record integrity
+- Trust and transparency
+- Secure transaction-related systems
+- Future decentralized capabilities
+
+Blockchain-related functionality is currently under development or exploration and should not be considered fully implemented unless explicitly documented in the relevant module.
+
+## Data Architecture
+
+FEASTY follows a single-source-of-truth approach for merchant data.
+
+The intended data flow is:
+
+Merchant enters or updates information
+|
+v
+FEASTY MERCHANT
+|
+v
+Validation and Publishing Workflow
+|
+v
+Authoritative Merchant Data
+|
+v
+Public Merchant API
+|
+v
+FEASTYMAP
+|
+v
+Customer-facing Discovery
+
+FEASTYMAP is a consumer of published Merchant data and does not maintain a separate manual merchant database.
+
+## Core Development Principles
+
+FEASTY is being developed with the following principles:
+
+- Security-first development
+- Single source of truth
+- Minimal data duplication
+- Validated APIs
+- Strong business and branch isolation
+- Production-oriented architecture
+- Incremental development
+- Automated testing
+- Clear separation between live data and development fixtures
+- Maintainable and scalable system design
+
+## Current Development Areas
+
+The current development roadmap includes:
+
+- Merchant management
+- Business discovery
+- Map integration
+- Public APIs
+- Offers
+- Content publishing
+- Analytics
+- Secure redemption
+- Cybersecurity
+- AI and Machine Learning
+- ScratchAI
+- Blockchain exploration
+- Intelligent ecosystem features
+- Additional platform integrations
+
+## Testing and Validation
+
+The projects are continuously tested and validated during development.
+
+Typical validation includes:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser to review
-the application. Current routes are `/`, `/login`, `/signup`,
-`/register/business-type`, and `/dashboard`.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts)
-to automatically optimize and load [Geist](https://vercel.com/font).
-
-## Validation
-
-Run these commands from `feasty-merchant-app/`:
-
-```bash
+npm test
+npm run type-check
 npm run lint
 npm run build
-```
-
-The project currently uses local form validation and static dashboard data.
-Supabase authentication, API calls, persistence, and production merchant
-workflows are not implemented yet.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+git diff --check
