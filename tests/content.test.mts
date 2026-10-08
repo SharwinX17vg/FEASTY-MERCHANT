@@ -12,6 +12,7 @@ import {
   isContentCurrentlyActive,
 } from "../lib/content/publication.ts";
 import { validateContent, validateRejectionReason } from "../lib/validation/content.ts";
+import { countContentAnalyticsEvents, validateContentAnalyticsEvent } from "../lib/validation/contentAnalytics.ts";
 import {
   MAX_CONTENT_IMAGE_SIZE,
   createContentImagePath,
@@ -86,6 +87,24 @@ test("post content ignores offer-only fields", () => {
   assert.deepEqual(result.errors, {});
   assert.equal(result.values.original_price, null);
   assert.equal(result.values.offer_code, null);
+});
+
+test("validates content analytics events", () => {
+  assert.deepEqual(validateContentAnalyticsEvent("view"), { eventType: "view" });
+  assert.deepEqual(validateContentAnalyticsEvent("click"), { eventType: "click" });
+  assert.equal(validateContentAnalyticsEvent("scroll").error, "Choose a valid analytics event.");
+});
+
+test("counts aggregate content analytics events", () => {
+  assert.deepEqual(countContentAnalyticsEvents([
+    { content_id: "content-1", event_type: "view", event_count: 3 },
+    { content_id: "content-1", event_type: "view", event_count: "2" },
+    { content_id: "content-1", event_type: "click", event_count: 1 },
+    { content_id: "content-2", event_type: "click", event_count: 4 },
+  ]), {
+    "content-1": { view_count: 5, click_count: 1 },
+    "content-2": { view_count: 0, click_count: 4 },
+  });
 });
 
 test("content publication follows merchant review workflow", () => {

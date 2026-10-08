@@ -38,6 +38,15 @@ type PublicBusiness = {
   website_url: string | null;
 };
 
+async function recordContentAnalytics(contentId: string, eventType: "view" | "click") {
+  await fetch(`/api/public/content/${encodeURIComponent(contentId)}/analytics`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event_type: eventType }),
+    keepalive: true,
+  });
+}
+
 type BusinessResponse = {
   business?: PublicBusiness;
   message?: string;
@@ -83,6 +92,13 @@ function ContentCard({ item }: { item: PublicContentItem }) {
             {item.offer_code ? <span>Code: {item.offer_code}</span> : null}
           </div>
         ) : null}
+        <button
+          className="mt-5 rounded-xl border border-primary/40 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
+          onClick={() => void recordContentAnalytics(item.id, "click")}
+          type="button"
+        >
+          {item.content_type === "offer" ? "View offer" : "View content"}
+        </button>
       </div>
     </Card>
   );
@@ -110,7 +126,9 @@ export function PublicContentFeed({ routeBusinessId = "" }: { routeBusinessId?: 
         if (!businessResponse.ok) throw new Error(businessResult.message ?? "Unable to load business.");
         if (!contentResponse.ok) throw new Error(contentResult.message ?? "Unable to load published content.");
         setBusiness(businessResult.business ?? null);
-        setItems((contentResult.items ?? []).filter((item) => isContentCurrentlyActive(item.starts_at, item.ends_at)));
+        const activeItems = (contentResult.items ?? []).filter((item) => isContentCurrentlyActive(item.starts_at, item.ends_at));
+        setItems(activeItems);
+        await Promise.all(activeItems.map((item) => recordContentAnalytics(item.id, "view")));
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Unable to load published content.");
       } finally {

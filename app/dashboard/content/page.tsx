@@ -32,6 +32,8 @@ type ContentItem = {
   image_path: string | null;
   image_url: string | null;
   created_at: string;
+  view_count?: number;
+  click_count?: number;
 };
 
 type ContentResponse = {
@@ -425,6 +427,15 @@ export default function ContentPage() {
                       {item.submitted_at ? <div><dt className="font-medium text-foreground">Submitted</dt><dd className="mt-1">{formatDate(item.submitted_at)}</dd></div> : null}
                       {item.published_at ? <div><dt className="font-medium text-foreground">Published</dt><dd className="mt-1">{formatDate(item.published_at)}</dd></div> : null}
                     </dl>
+                    {item.publication_status === "published" ? (
+                      <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-muted">
+                        <p className="font-medium text-foreground">Analytics</p>
+                        <div className="mt-2 flex gap-5">
+                          <span>Views: {item.view_count ?? 0}</span>
+                          <span>Clicks: {item.click_count ?? 0}</span>
+                        </div>
+                      </div>
+                    ) : null}
                     <div className="mt-5 flex flex-wrap gap-3">
                       {editingId === item.id ? (
                         <>

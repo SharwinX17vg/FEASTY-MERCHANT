@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getValidatedWorkspaceContext } from "@/lib/workspace/context";
 import { validateContent } from "@/lib/validation/content";
 import { CONTENT_IMAGE_BUCKET, createContentImagePath, validateContentImage } from "@/lib/content/storage";
+import { countContentAnalyticsEvents } from "@/lib/validation/contentAnalytics";
 
 const contentSelect = "id,business_id,content_type,title,body,starts_at,ends_at,original_price,offer_price,discount_percentage,offer_code,publication_status,rejection_reason,image_path,submitted_at,published_at,created_by,created_at,updated_at";
 
@@ -19,8 +20,18 @@ export async function GET() {
     .eq("business_id", result.data.businessId)
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ message: "Unable to load content." }, { status: 503 });
+  const publishedIds = (data ?? []).filter((item) => item.publication_status === "published").map((item) => item.id);
+  const analytics = publishedIds.length
+    ? await supabase
+      .from("merchant_content_analytics")
+      .select("content_id,event_type,event_count")
+      .in("content_id", publishedIds)
+    : { data: [], error: null };
+  if (analytics.error) return NextResponse.json({ message: "Unable to load content analytics." }, { status: 503 });
+  const analyticsCounts = countContentAnalyticsEvents(analytics.data ?? []);
   const items = (data ?? []).map((item) => ({
     ...item,
+    ...(item.publication_status === "published" ? analyticsCounts[item.id] ?? { view_count: 0, click_count: 0 } : {}),
     image_url: item.image_path
       ? supabase.storage.from(CONTENT_IMAGE_BUCKET).getPublicUrl(item.image_path).data.publicUrl
       : null,
