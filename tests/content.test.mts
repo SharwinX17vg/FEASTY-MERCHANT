@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -265,4 +266,30 @@ test("content publication follows merchant review workflow", () => {
     rejection_reason: null,
   });
   assert.equal(validateRejectionReason("x").error, "Enter a rejection reason between 2 and 1,000 characters.");
+});
+
+test("database workflow protection preserves valid transitions and blocks bypasses", () => {
+  const migration = readFileSync(
+    new URL("../supabase/migrations/20261008220000_merchant_content_workflow_protection.sql", import.meta.url),
+    "utf8",
+  );
+
+  for (const transition of [
+    "old.publication_status = 'draft'",
+    "old.publication_status = 'rejected'",
+    "old.publication_status = 'pending_review'",
+    "old.publication_status = 'approved'",
+  ]) {
+    assert.match(migration, new RegExp(transition.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(migration, /new\.publication_status = 'pending_review'/);
+  assert.match(migration, /new\.publication_status = 'rejected'/);
+  assert.match(migration, /new\.publication_status = 'approved'/);
+  assert.match(migration, /new\.publication_status = 'published'/);
+  assert.match(migration, /Invalid merchant content publication transition/);
+  assert.match(migration, /new\.submitted_at is distinct from old\.submitted_at/);
+  assert.match(migration, /new\.published_at is distinct from old\.published_at/);
+  assert.match(migration, /new\.publish_at is distinct from old\.publish_at/);
+  assert.match(migration, /merchant_content_workflow_protection/);
+  assert.doesNotMatch(migration, /old\.publication_status = 'draft'\s+and new\.publication_status = 'published'/);
 });
