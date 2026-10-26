@@ -3,6 +3,10 @@ import test from "node:test";
 
 import { getSafeNextPath } from "../lib/auth/redirect.ts";
 import {
+  SupabaseConfigurationError,
+  getSupabaseEnvironment,
+} from "../lib/supabase/config-core.ts";
+import {
   getNetworkErrorMessage,
   getSafeAuthError,
   NETWORK_ERROR_MESSAGE,
@@ -50,6 +54,68 @@ test("auth errors are mapped to safe, retryable messages", () => {
   assert.equal(getSafeAuthError(503, "secret stack trace"), "The authentication service is temporarily unavailable. Please try again.");
   assert.equal(getSafeAuthError(400, "SQLSTATE 23505"), "Something went wrong. Please try again.");
   assert.equal(getNetworkErrorMessage(), NETWORK_ERROR_MESSAGE);
+});
+
+test("Supabase configuration reports missing variable names without values", () => {
+  const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const previousPublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const previousAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+  delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  try {
+    assert.throws(
+      () => getSupabaseEnvironment(),
+      (error: unknown) => {
+        assert.ok(error instanceof SupabaseConfigurationError);
+        assert.deepEqual(error.missingVariables, [
+          "NEXT_PUBLIC_SUPABASE_URL",
+          "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+        ]);
+        assert.equal(error.message, "Supabase environment configuration is incomplete.");
+        return true;
+      },
+    );
+  } finally {
+    if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
+    if (previousPublishableKey === undefined) {
+      delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    } else {
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = previousPublishableKey;
+    }
+    if (previousAnonKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = previousAnonKey;
+  }
+});
+
+test("Supabase configuration supports the legacy anon key fallback", () => {
+  const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const previousPublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const previousAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "public-anon-key";
+
+  try {
+    assert.deepEqual(getSupabaseEnvironment(), {
+      url: "https://example.supabase.co",
+      publishableKey: "public-anon-key",
+    });
+  } finally {
+    if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
+    if (previousPublishableKey === undefined) {
+      delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    } else {
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = previousPublishableKey;
+    }
+    if (previousAnonKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = previousAnonKey;
+  }
 });
 
 test("login and email validation use shared rules", () => {

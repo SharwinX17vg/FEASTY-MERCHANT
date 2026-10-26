@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getSiteUrl } from "@/lib/supabase/config";
+import { SupabaseConfigurationError, getSiteUrl } from "@/lib/supabase/config";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { normalizePhone, validateSignupInput } from "@/lib/validation/auth";
 
@@ -39,7 +39,14 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ confirmed: Boolean(data.session) });
-  } catch {
+  } catch (error) {
+    if (error instanceof SupabaseConfigurationError) {
+      return NextResponse.json(
+        { message: "Signup is not configured. Please contact the site administrator." },
+        { status: 503 },
+      );
+    }
+
     return NextResponse.json(
       { message: "The signup service is unavailable. Please try again later." },
       { status: 503 },

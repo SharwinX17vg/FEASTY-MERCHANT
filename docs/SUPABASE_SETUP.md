@@ -1,8 +1,8 @@
 # Supabase Setup
 
-This project currently contains only the Supabase client foundation. It does
-not connect to a project, create users, define tables, run queries, or
-implement authentication.
+The merchant application uses Supabase for authentication and database-backed
+merchant workflows. A local Supabase project configuration is required before
+running authenticated flows.
 
 ## Environment variables
 
@@ -11,8 +11,13 @@ project is ready to be connected:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
+
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` remains supported as a fallback for existing
+local environments, but new environments should use
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 
 ### Supabase URL
 
@@ -45,11 +50,10 @@ server-only environment if a future, reviewed requirement needs it.
 ## Foundation modules
 
 - `lib/supabase/client.ts` exposes a lazy browser client factory.
-- `lib/supabase/server.ts` exposes a server-side client factory.
+- `lib/supabase/server.ts` exposes a cookie-aware server-side client factory.
 - `services/supabase.ts` validates environment configuration and creates the
   shared Supabase client.
-- `types/database.ts` is a placeholder for generated schema types.
+- `types/database.ts` contains the application's database types.
 
-The server factory intentionally does not add cookies, sessions, or auth
-behavior yet. A future authentication checkpoint can introduce the appropriate
-server-session adapter and middleware when that scope is approved.
+When configuration is missing, server routes return a safe configuration
+message and never include environment values, credentials, or stack traces.

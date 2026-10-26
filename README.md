@@ -1,9 +1,8 @@
 # FEASTY MERCHANT
 
 FEASTY MERCHANT is the merchant-facing Next.js application in the FEASTY
-ecosystem. The current Day 1 foundation provides responsive UI routes, reusable
-layout and form primitives, route loading/error boundaries, and Supabase client
-scaffolding without connected authentication or backend workflows.
+ecosystem. It provides merchant onboarding, authentication, business and branch
+management, content workflows, offers, analytics, and public discovery APIs.
 
 ## Project folders
 
@@ -17,10 +16,10 @@ scaffolding without connected authentication or backend workflows.
 - `public/` - Static assets served directly by Next.js.
 - `docs/` - Project documentation and architecture notes.
 
-See [docs/PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md) for the planned
+See [docs/PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md) for the
 responsibilities and boundaries of each folder. See
-[docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) for the intentionally
-unconnected Supabase foundation.
+[docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) for local Supabase
+configuration.
 
 ## Getting Started
 
@@ -49,12 +48,14 @@ Run these commands from `feasty-merchant-app/`:
 
 ```bash
 npm run lint
+npm run typecheck
+npm test
 npm run build
 ```
 
-The project currently uses local form validation and static dashboard data.
-Supabase authentication, API calls, persistence, and production merchant
-workflows are not implemented yet.
+Copy `.env.example` to `.env.local` and provide the values from the intended
+Supabase project. Never commit `.env.local`; signup and other authenticated
+flows cannot be validated locally without real project configuration.
 
 ## Learn More
 
