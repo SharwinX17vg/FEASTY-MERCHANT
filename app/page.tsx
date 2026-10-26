@@ -77,7 +77,7 @@ const benefits = [
   },
   {
     title: "Reach FEASTYMAP Users",
-    description: "Turn local discovery into more visits, orders, and bookings.",
+    description: "Make your approved business presence easier to discover locally.",
     icon: "globe" as IconName,
   },
 ];
@@ -127,7 +127,9 @@ function SectionHeading({
 }
 
 export default function Home() {
-  const feastymapUrl = "https://feastymap.vercel.app/outing-planner";
+  const feastymapUrl =
+    process.env.NEXT_PUBLIC_FEASTYMAP_URL ??
+    "https://feastymap.vercel.app/outing-planner";
 
   return (
     <main className="overflow-hidden bg-background">
@@ -189,20 +191,22 @@ export default function Home() {
               <div className="flex items-center justify-between border-b border-white/10 pb-5">
                 <div>
                   <p className="text-xs font-medium text-muted">Your business, in one view</p>
-                  <p className="mt-1 text-lg font-semibold text-white">Good morning, merchant</p>
+                  <p className="mt-1 text-lg font-semibold text-white">A clearer path to discovery</p>
                 </div>
-                <span className="rounded-lg bg-primary/15 px-3 py-1.5 text-xs font-medium text-accent">Live preview</span>
+                <span className="rounded-lg bg-primary/15 px-3 py-1.5 text-xs font-medium text-accent">
+                  Workspace preview
+                </span>
               </div>
               <div className="grid gap-3 pt-5 sm:grid-cols-3">
                 {[
-                  ["Profile reach", "12.8k", "+18.4%"],
-                  ["Menu views", "4,290", "+12.1%"],
-                  ["Active offers", "08", "Ready to publish"],
-                ].map(([label, value, change]) => (
+                  ["Business profile", "One source of truth", "Keep details current"],
+                  ["Content workflow", "Draft → review", "Publish with confidence"],
+                  ["Public discovery", "Approved content", "Ready for FEASTYMAP"],
+                ].map(([label, value, description]) => (
                   <div key={label} className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-xs text-muted">{label}</p>
-                    <p className="mt-3 text-2xl font-semibold text-white">{value}</p>
-                    <p className="mt-1 text-xs text-primary">{change}</p>
+                    <p className="mt-3 text-lg font-semibold text-white">{value}</p>
+                    <p className="mt-1 text-xs text-primary">{description}</p>
                   </div>
                 ))}
               </div>

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { getSafeNextPath } from "../lib/auth/redirect.ts";
+import { getSignupRedirectPath } from "../lib/auth/signup.ts";
 import {
   SupabaseConfigurationError,
   getSupabaseEnvironment,
@@ -47,6 +48,22 @@ test("safe redirect handling allows internal paths and rejects external paths", 
   assert.equal(getSafeNextPath("//example.com"), "/dashboard");
   assert.equal(getSafeNextPath("https://example.com"), "/dashboard");
   assert.equal(getSafeNextPath(null, "/login"), "/login");
+});
+
+test("signup redirects email-unverified users to confirmation", () => {
+  assert.equal(getSignupRedirectPath({ confirmed: false }), "/check-email");
+});
+
+test("signup redirects authenticated users to the next onboarding step", () => {
+  assert.equal(
+    getSignupRedirectPath({ confirmed: true, onboardingState: "BUSINESS_CREATED" }),
+    "/register/branch",
+  );
+  assert.equal(
+    getSignupRedirectPath({ confirmed: true, onboardingState: "COMPLETED" }),
+    "/dashboard",
+  );
+  assert.equal(getSignupRedirectPath({ confirmed: true }), "/register/business-type");
 });
 
 test("auth errors are mapped to safe, retryable messages", () => {
@@ -209,6 +226,14 @@ test("password feedback uses the same requirements as validation", () => {
   assert.deepEqual(getPasswordStrength("weak"), { score: 1, label: "Weak" });
   assert.deepEqual(getPasswordStrength("Longpassword1"), { score: 4, label: "Fair" });
   assert.deepEqual(getPasswordStrength("Longpassword1!"), { score: 5, label: "Strong" });
+});
+
+test("password strength updates when requirements are gained or lost", () => {
+  assert.deepEqual(getPasswordStrength(""), { score: 0, label: "Weak" });
+  assert.deepEqual(getPasswordStrength("A"), { score: 1, label: "Weak" });
+  assert.deepEqual(getPasswordStrength("Abcdefg1"), { score: 4, label: "Fair" });
+  assert.deepEqual(getPasswordStrength("Abcdefg1!"), { score: 5, label: "Strong" });
+  assert.deepEqual(getPasswordStrength("Abcdefg1"), { score: 4, label: "Fair" });
 });
 
 test("normalizes a valid Indian phone number to E.164", () => {

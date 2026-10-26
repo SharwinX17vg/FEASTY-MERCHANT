@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import type { CountryCode } from "libphonenumber-js";
 
@@ -15,6 +16,7 @@ import {
   validateSignupInput,
 } from "@/lib/validation/auth";
 import { getNetworkErrorMessage, getSafeAuthError } from "@/lib/auth/errors";
+import { getSignupRedirectPath } from "@/lib/auth/signup";
 
 type FormErrors = {
   name?: string;
@@ -61,6 +63,7 @@ function Icon({
 }
 
 export default function SignupPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [password, setPassword] = useState("");
@@ -124,6 +127,7 @@ export default function SignupPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) return;
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const submittedConfirmPassword = String(formData.get("confirmPassword") ?? "");
@@ -170,9 +174,29 @@ export default function SignupPage() {
         return;
       }
       setFormSuccess("Your account was created successfully. Continuing…");
-      window.setTimeout(() => {
-        window.location.assign(result.confirmed ? "/register/business-type" : "/check-email");
-      }, 400);
+      let onboardingState: string | undefined;
+      let onboardingLookupFailed = false;
+      if (result.confirmed) {
+        try {
+          const onboardingResponse = await fetch("/api/onboarding/state", {
+            cache: "no-store",
+          });
+          if (onboardingResponse.ok) {
+            const onboarding = (await onboardingResponse.json()) as { state?: string };
+            onboardingState = onboarding.state;
+          } else {
+            onboardingLookupFailed = true;
+          }
+        } catch {
+          onboardingLookupFailed = true;
+        }
+      }
+      if (onboardingLookupFailed) {
+        setFormSuccess(
+          "Your account was created successfully. Starting the first onboarding step…",
+        );
+      }
+      router.replace(getSignupRedirectPath({ ...result, onboardingState }));
     } catch {
       setFormError(getNetworkErrorMessage());
     } finally {
@@ -181,6 +205,7 @@ export default function SignupPage() {
   }
 
   async function handleGoogleSignUp() {
+    if (isSubmitting) return;
     setFormError("");
     setIsSubmitting(true);
     try {
@@ -270,6 +295,9 @@ export default function SignupPage() {
                 error={errors.name}
                 label="Full Name"
                 name="name"
+                onChange={() => {
+                  setErrors((current) => ({ ...current, name: undefined }));
+                }}
                 placeholder="Your full name"
                 type="text"
               />
@@ -278,6 +306,9 @@ export default function SignupPage() {
                 error={errors.email}
                 label="Business Email"
                 name="email"
+                onChange={() => {
+                  setErrors((current) => ({ ...current, email: undefined }));
+                }}
                 placeholder="you@yourbusiness.com"
                 type="email"
               />
@@ -372,7 +403,10 @@ export default function SignupPage() {
                       className="min-h-10 border-0 bg-transparent px-3 py-0 focus:border-0 focus:ring-0"
                       error={errors.phone}
                       name="phone"
-                      onChange={(event) => handlePhoneChange(event.target.value)}
+                      onChange={(event) => {
+                        handlePhoneChange(event.target.value);
+                        setErrors((current) => ({ ...current, phone: undefined }));
+                      }}
                       onPaste={handlePhonePaste}
                       placeholder="98765 43210"
                       type="tel"
@@ -390,7 +424,10 @@ export default function SignupPage() {
                   error={errors.password}
                   label="Password"
                   name="password"
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    setErrors((current) => ({ ...current, password: undefined }));
+                  }}
                   placeholder="Create a strong password"
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -403,7 +440,14 @@ export default function SignupPage() {
                 >
                   <Icon name={showPassword ? "eyeOff" : "eye"} className="size-5" />
                 </button>
-                <div aria-live="polite" className="mt-2 flex items-center gap-2">
+                <div
+                  aria-label={`Password strength: ${password ? passwordStrength.label : "not started"}`}
+                  aria-valuemax={5}
+                  aria-valuemin={0}
+                  aria-valuenow={passwordStrength.score}
+                  className="mt-2 flex items-center gap-2"
+                  role="progressbar"
+                >
                   <div className="flex flex-1 gap-1">
                     {[1, 2, 3, 4, 5].map((level) => (
                       <span
@@ -442,9 +486,13 @@ export default function SignupPage() {
                   error={errors.confirmPassword}
                   label="Confirm Password"
                   name="confirmPassword"
-                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  onChange={(event) => {
+                    setConfirmPassword(event.target.value);
+                    setErrors((current) => ({ ...current, confirmPassword: undefined }));
+                  }}
                   placeholder="Repeat your password"
                   type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
                 />
                 <button
                   aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
@@ -465,7 +513,10 @@ export default function SignupPage() {
                 <input
                   checked={termsAccepted}
                   className="mt-0.5 size-4 accent-[var(--primary)]"
-                  onChange={(event) => setTermsAccepted(event.target.checked)}
+                  onChange={(event) => {
+                    setTermsAccepted(event.target.checked);
+                    setErrors((current) => ({ ...current, terms: undefined }));
+                  }}
                   type="checkbox"
                 />
                 <span>
