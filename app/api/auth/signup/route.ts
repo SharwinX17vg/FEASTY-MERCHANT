@@ -32,6 +32,15 @@ export async function POST(request: Request) {
     });
 
     if (error) {
+      console.warn(
+        "Supabase signup request was rejected.",
+        JSON.stringify({
+          name: error.name,
+          message: error.message,
+          status: error.status,
+          code: error.code,
+        }),
+      );
       return NextResponse.json(
         { message: "Unable to create your account. Check your details and try again." },
         { status: 400 },
