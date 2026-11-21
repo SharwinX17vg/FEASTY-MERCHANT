@@ -5,6 +5,11 @@ export class InvalidJsonBodyError extends Error {
   }
 }
 
+export function getInvalidJsonBodyResponse(error: unknown): Response | undefined {
+  if (!(error instanceof InvalidJsonBodyError)) return undefined;
+  return Response.json({ message: error.message }, { status: 400 });
+}
+
 export async function readJsonObject(request: Request): Promise<Record<string, unknown>> {
   let body: unknown;
   try {

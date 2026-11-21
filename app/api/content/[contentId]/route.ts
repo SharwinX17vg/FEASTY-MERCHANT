@@ -4,6 +4,10 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getValidatedWorkspaceContext } from "@/lib/workspace/context";
 import { validateContent } from "@/lib/validation/content";
 import { CONTENT_IMAGE_BUCKET, createContentImagePath, validateContentImage } from "@/lib/content/storage";
+import {
+  getInvalidJsonBodyResponse,
+  readJsonObject,
+} from "@/lib/http/request";
 
 type RouteContext = { params: Promise<{ contentId: string }> };
 
@@ -26,10 +30,22 @@ export async function PUT(request: Request, context: RouteContext) {
     return NextResponse.json({ message: "Only draft or rejected content can be edited." }, { status: 409 });
   }
   const isMultipart = request.headers.get("content-type")?.includes("multipart/form-data") ?? false;
-  const formData = isMultipart ? await request.formData() : null;
-  const input = formData
-    ? Object.fromEntries(formData.entries()) as Record<string, unknown>
-    : (await request.json()) as Record<string, unknown>;
+  let formData: FormData | null = null;
+  try {
+    formData = isMultipart ? await request.formData() : null;
+  } catch {
+    return NextResponse.json({ message: "Request body must be valid multipart data." }, { status: 400 });
+  }
+  let input: Record<string, unknown>;
+  try {
+    input = formData
+      ? Object.fromEntries(formData.entries())
+      : await readJsonObject(request);
+  } catch (error) {
+    const invalidBody = getInvalidJsonBodyResponse(error);
+    if (invalidBody) return invalidBody;
+    throw error;
+  }
   const removeImage = input.remove_image === "true";
   const file = formData?.get("image");
   const validation = validateContent(input);

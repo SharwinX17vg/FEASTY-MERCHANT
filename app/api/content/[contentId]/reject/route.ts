@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { canReviewContent, getContentRejectionUpdate } from "@/lib/content/publication";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getValidatedWorkspaceContext } from "@/lib/workspace/context";
+import {
+  getInvalidJsonBodyResponse,
+  readJsonObject,
+} from "@/lib/http/request";
 import { validateRejectionReason } from "@/lib/validation/content";
 
 type RouteContext = { params: Promise<{ contentId: string }> };
@@ -11,7 +15,14 @@ export async function POST(request: Request, context: RouteContext) {
   const result = await getValidatedWorkspaceContext();
   if ("error" in result) return NextResponse.json({ message: result.error }, { status: result.status });
   const { contentId } = await context.params;
-  const input = (await request.json()) as { reason?: unknown };
+  let input: Record<string, unknown>;
+  try {
+    input = await readJsonObject(request);
+  } catch (error) {
+    const invalidBody = getInvalidJsonBodyResponse(error);
+    if (invalidBody) return invalidBody;
+    throw error;
+  }
   const validation = validateRejectionReason(input.reason);
   if ("error" in validation) return NextResponse.json({ message: validation.error }, { status: 400 });
   const supabase = await getSupabaseServerClient();

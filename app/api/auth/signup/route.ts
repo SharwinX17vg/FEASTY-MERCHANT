@@ -11,12 +11,16 @@ import {
   getSignupProviderErrorMessage,
   getSupabaseAuthErrorDetails,
 } from "@/lib/auth/route-errors";
+import {
+  getInvalidJsonBodyResponse,
+  readJsonObject,
+} from "@/lib/http/request";
 import { normalizePhone, validateSignupInput } from "@/lib/validation/auth";
 
 export async function POST(request: Request) {
   try {
     getSupabaseEnvironment();
-    const input = (await request.json()) as Record<string, unknown>;
+    const input = await readJsonObject(request);
     const validation = validateSignupInput(input);
     if (Object.keys(validation.errors).length > 0) {
       return NextResponse.json({ errors: validation.errors }, { status: 400 });
@@ -59,6 +63,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ confirmed: Boolean(data.session) });
   } catch (error) {
+    const invalidBody = getInvalidJsonBodyResponse(error);
+    if (invalidBody) return invalidBody;
     if (error instanceof SupabaseConfigurationError) {
       const failure = getAuthRouteFailure(error, "The signup service is unavailable. Please try again later.");
       return NextResponse.json({ message: failure.message }, { status: failure.status });

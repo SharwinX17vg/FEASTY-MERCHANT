@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { validateBranch } from "@/lib/validation/branch";
+import {
+  getInvalidJsonBodyResponse,
+  readJsonObject,
+} from "@/lib/http/request";
 
 export async function POST(request: Request) {
   try {
-    const input = (await request.json()) as Record<string, unknown>;
+    const input = await readJsonObject(request);
     const validation = validateBranch({
       name: input.name,
       address_line_1: input.addressLine1,
@@ -54,7 +58,9 @@ export async function POST(request: Request) {
     }).select("id").single();
     if (branch.error) return NextResponse.json({ message: "Unable to save your branch." }, { status: 400 });
     return NextResponse.json({ id: branch.data.id });
-  } catch {
+  } catch (error) {
+    const invalidBody = getInvalidJsonBodyResponse(error);
+    if (invalidBody) return invalidBody;
     return NextResponse.json({ message: "Unable to save branch details." }, { status: 503 });
   }
 }

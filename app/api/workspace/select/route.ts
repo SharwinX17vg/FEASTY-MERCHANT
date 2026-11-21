@@ -6,10 +6,14 @@ import {
   ACTIVE_ORG_COOKIE,
   getValidatedWorkspaceContext,
 } from "@/lib/workspace/context";
+import {
+  getInvalidJsonBodyResponse,
+  readJsonObject,
+} from "@/lib/http/request";
 
 export async function POST(request: Request) {
   try {
-    const input = (await request.json().catch(() => ({}))) as {
+    const input = await readJsonObject(request) as {
       businessId?: string;
       organizationId?: string;
     };
@@ -52,7 +56,9 @@ export async function POST(request: Request) {
         businesses: result.data.businesses,
       },
     });
-  } catch {
+  } catch (error) {
+    const invalidBody = getInvalidJsonBodyResponse(error);
+    if (invalidBody) return invalidBody;
     return NextResponse.json({ message: "Unable to update active workspace." }, { status: 503 });
   }
 }

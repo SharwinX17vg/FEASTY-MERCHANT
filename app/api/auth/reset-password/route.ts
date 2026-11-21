@@ -3,10 +3,17 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { validatePassword } from "@/lib/validation/auth";
 import { getAuthRouteFailure } from "@/lib/auth/route-errors";
+import {
+  getInvalidJsonBodyResponse,
+  readJsonObject,
+} from "@/lib/http/request";
 
 export async function POST(request: Request) {
   try {
-    const input = (await request.json()) as { password?: string; confirmPassword?: string };
+    const input = await readJsonObject(request) as {
+      password?: string;
+      confirmPassword?: string;
+    };
     const password = String(input.password ?? "");
     const passwordError = validatePassword(password);
     if (passwordError || password !== input.confirmPassword) {
@@ -21,6 +28,8 @@ export async function POST(request: Request) {
     if (error) return NextResponse.json({ message: "This recovery link is invalid or expired." }, { status: 400 });
     return NextResponse.json({ ok: true });
   } catch (error) {
+    const invalidBody = getInvalidJsonBodyResponse(error);
+    if (invalidBody) return invalidBody;
     const failure = getAuthRouteFailure(error, "Unable to reset your password.");
     return NextResponse.json({ message: failure.message }, { status: failure.status });
   }

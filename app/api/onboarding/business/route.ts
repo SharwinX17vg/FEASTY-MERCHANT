@@ -3,10 +3,14 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentOnboarding } from "@/lib/onboarding/server";
 import { validateBusinessProfile } from "@/lib/validation/business-profile";
+import {
+  getInvalidJsonBodyResponse,
+  readJsonObject,
+} from "@/lib/http/request";
 
 export async function POST(request: Request) {
   try {
-    const input = (await request.json()) as {
+    const input = await readJsonObject(request) as {
       category?: string;
       email?: string;
       name?: string;
@@ -73,7 +77,9 @@ export async function POST(request: Request) {
       .single();
     if (business.error) return NextResponse.json({ message: "Unable to save your business." }, { status: 400 });
     return NextResponse.json({ id: business.data.id });
-  } catch {
+  } catch (error) {
+    const invalidBody = getInvalidJsonBodyResponse(error);
+    if (invalidBody) return invalidBody;
     return NextResponse.json({ message: "Unable to save onboarding details." }, { status: 503 });
   }
 }

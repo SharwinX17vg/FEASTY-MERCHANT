@@ -7,12 +7,16 @@ import {
   getLoginProviderErrorMessage,
   getSupabaseAuthErrorDetails,
 } from "@/lib/auth/route-errors";
+import {
+  getInvalidJsonBodyResponse,
+  readJsonObject,
+} from "@/lib/http/request";
 import { validateLoginInput } from "@/lib/validation/auth";
 
 export async function POST(request: Request) {
   try {
     getSupabaseEnvironment();
-    const input = (await request.json()) as Record<string, unknown>;
+    const input = await readJsonObject(request);
     const validation = validateLoginInput(input);
     if (Object.keys(validation.errors).length > 0) {
       return NextResponse.json({ message: "Enter a valid email and password." }, { status: 400 });
@@ -37,6 +41,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    const invalidBody = getInvalidJsonBodyResponse(error);
+    if (invalidBody) return invalidBody;
     const failure = getAuthRouteFailure(error, "The login service is unavailable. Please try again later.");
     return NextResponse.json({ message: failure.message }, { status: failure.status });
   }

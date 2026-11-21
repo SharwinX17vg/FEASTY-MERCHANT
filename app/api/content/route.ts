@@ -8,6 +8,10 @@ import { countContentAnalyticsEvents } from "@/lib/validation/contentAnalytics";
 import { countContentRedemptions } from "@/lib/validation/contentRedemption";
 import { buildContentAnalyticsDashboard } from "@/lib/validation/contentAnalytics";
 import { isContentPubliclyAvailable } from "@/lib/content/publication";
+import {
+  getInvalidJsonBodyResponse,
+  readJsonObject,
+} from "@/lib/http/request";
 
 const contentSelect = "id,business_id,content_type,title,body,starts_at,ends_at,publish_at,original_price,offer_price,discount_percentage,offer_code,publication_status,rejection_reason,image_path,submitted_at,published_at,created_by,created_at,updated_at";
 
@@ -78,10 +82,22 @@ export async function POST(request: Request) {
   }
 
   const isMultipart = request.headers.get("content-type")?.includes("multipart/form-data") ?? false;
-  const formData = isMultipart ? await request.formData() : null;
-  const input = formData
-    ? Object.fromEntries(formData.entries()) as Record<string, unknown>
-    : (await request.json()) as Record<string, unknown>;
+  let formData: FormData | null = null;
+  try {
+    formData = isMultipart ? await request.formData() : null;
+  } catch {
+    return NextResponse.json({ message: "Request body must be valid multipart data." }, { status: 400 });
+  }
+  let input: Record<string, unknown>;
+  try {
+    input = formData
+      ? Object.fromEntries(formData.entries())
+      : await readJsonObject(request);
+  } catch (error) {
+    const invalidBody = getInvalidJsonBodyResponse(error);
+    if (invalidBody) return invalidBody;
+    throw error;
+  }
   const file = formData?.get("image");
   const validation = validateContent(input);
   if (Object.keys(validation.errors).length > 0) {
