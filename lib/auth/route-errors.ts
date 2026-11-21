@@ -46,6 +46,20 @@ export function getSignupProviderErrorMessage(code?: string) {
   }
 }
 
+export function getLoginProviderErrorMessage(code?: string) {
+  switch (code) {
+    case "invalid_credentials":
+    case "user_not_found":
+      return "Email or password is incorrect.";
+    case "email_not_confirmed":
+      return "If you recently signed up, confirm your email before signing in. Check your inbox and spam folder; otherwise verify your email and password.";
+    case "over_request_rate_limit":
+      return "Too many sign-in attempts were made. Wait a few minutes and try again.";
+    default:
+      return "Unable to sign in right now. Please try again later.";
+  }
+}
+
 export function getGoogleProviderErrorMessage(code?: string, providerMessage?: string) {
   const normalizedMessage = providerMessage?.toLowerCase() ?? "";
   if (

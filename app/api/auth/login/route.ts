@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 
 import { getSupabaseEnvironment } from "@/lib/supabase/config";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { getAuthRouteFailure } from "@/lib/auth/route-errors";
+import {
+  getAuthRouteFailure,
+  getLoginProviderErrorMessage,
+  getSupabaseAuthErrorDetails,
+} from "@/lib/auth/route-errors";
 import { validateLoginInput } from "@/lib/validation/auth";
 
 export async function POST(request: Request) {
@@ -20,7 +24,15 @@ export async function POST(request: Request) {
       password: validation.password,
     });
     if (error) {
-      return NextResponse.json({ message: "Email or password is incorrect." }, { status: 401 });
+      const details = getSupabaseAuthErrorDetails(error);
+      console.warn(
+        "Supabase login request was rejected.",
+        JSON.stringify({ name: error.name, status: error.status, code: error.code }),
+      );
+      return NextResponse.json(
+        { message: getLoginProviderErrorMessage(details.code) },
+        { status: details.status ?? 401 },
+      );
     }
 
     return NextResponse.json({ ok: true });

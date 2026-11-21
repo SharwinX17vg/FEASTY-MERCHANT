@@ -6,6 +6,7 @@ import { getSignupRedirectPath } from "../lib/auth/signup.ts";
 import {
   AUTH_CONFIGURATION_ERROR_MESSAGE,
   getAuthRouteFailure,
+  getLoginProviderErrorMessage,
 } from "../lib/auth/route-errors.ts";
 import {
   SupabaseConfigurationError,
@@ -79,6 +80,32 @@ test("auth errors are mapped to safe, retryable messages", () => {
   );
   assert.equal(getSafeAuthError(400, "SQLSTATE 23505"), "Something went wrong. Please try again.");
   assert.equal(getNetworkErrorMessage(), NETWORK_ERROR_MESSAGE);
+});
+
+test("login provider errors distinguish unconfirmed email and retryable failures", () => {
+  assert.equal(
+    getLoginProviderErrorMessage("invalid_credentials"),
+    "Email or password is incorrect.",
+  );
+  assert.equal(
+    getLoginProviderErrorMessage("email_not_confirmed"),
+    "If you recently signed up, confirm your email before signing in. Check your inbox and spam folder; otherwise verify your email and password.",
+  );
+  assert.equal(
+    getLoginProviderErrorMessage("over_request_rate_limit"),
+    "Too many sign-in attempts were made. Wait a few minutes and try again.",
+  );
+  assert.equal(
+    getLoginProviderErrorMessage("unexpected_error"),
+    "Unable to sign in right now. Please try again later.",
+  );
+  assert.equal(
+    getSafeAuthError(
+      400,
+      getLoginProviderErrorMessage("email_not_confirmed"),
+    ),
+    "If you recently signed up, confirm your email before signing in. Check your inbox and spam folder; otherwise verify your email and password.",
+  );
 });
 
 test("Supabase configuration reports missing variable names without values", () => {
