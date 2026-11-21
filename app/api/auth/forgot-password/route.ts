@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getSiteUrl } from "@/lib/supabase/config";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getAuthRouteFailure } from "@/lib/auth/route-errors";
 
 export async function POST(request: Request) {
   try {
@@ -15,7 +16,8 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ message: "Unable to send a reset email." }, { status: 503 });
+  } catch (error) {
+    const failure = getAuthRouteFailure(error, "Unable to send a reset email.");
+    return NextResponse.json({ message: failure.message }, { status: failure.status });
   }
 }

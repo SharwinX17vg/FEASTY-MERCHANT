@@ -4,6 +4,10 @@ import test from "node:test";
 import { getSafeNextPath } from "../lib/auth/redirect.ts";
 import { getSignupRedirectPath } from "../lib/auth/signup.ts";
 import {
+  AUTH_CONFIGURATION_ERROR_MESSAGE,
+  getAuthRouteFailure,
+} from "../lib/auth/route-errors.ts";
+import {
   SupabaseConfigurationError,
   getSupabaseEnvironment,
 } from "../lib/supabase/config-core.ts";
@@ -69,6 +73,10 @@ test("signup redirects authenticated users to the next onboarding step", () => {
 test("auth errors are mapped to safe, retryable messages", () => {
   assert.equal(getSafeAuthError(401, "database password mismatch"), "Email or password is incorrect.");
   assert.equal(getSafeAuthError(503, "secret stack trace"), "The authentication service is temporarily unavailable. Please try again.");
+  assert.equal(
+    getSafeAuthError(503, "Signup is not configured. Please contact the site administrator."),
+    "Signup is not configured. Please contact the site administrator.",
+  );
   assert.equal(getSafeAuthError(400, "SQLSTATE 23505"), "Something went wrong. Please try again.");
   assert.equal(getNetworkErrorMessage(), NETWORK_ERROR_MESSAGE);
 });
@@ -133,6 +141,66 @@ test("Supabase configuration supports the legacy anon key fallback", () => {
     if (previousAnonKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = previousAnonKey;
   }
+});
+
+test("Supabase configuration treats empty values as missing and falls back to a legacy key", () => {
+  const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const previousPublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const previousAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  process.env.NEXT_PUBLIC_SUPABASE_URL = " https://example.supabase.co ";
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "   ";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = " legacy-anon-key ";
+
+  try {
+    assert.deepEqual(getSupabaseEnvironment(), {
+      url: "https://example.supabase.co",
+      publishableKey: "legacy-anon-key",
+    });
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "  ";
+    assert.throws(
+      () => getSupabaseEnvironment(),
+      (error: unknown) =>
+        error instanceof SupabaseConfigurationError &&
+        error.missingVariables.includes("NEXT_PUBLIC_SUPABASE_URL"),
+    );
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "";
+    assert.throws(
+      () => getSupabaseEnvironment(),
+      (error: unknown) =>
+        error instanceof SupabaseConfigurationError &&
+        error.missingVariables.includes("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
+    );
+  } finally {
+    if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
+    if (previousPublishableKey === undefined) {
+      delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    } else {
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = previousPublishableKey;
+    }
+    if (previousAnonKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    else process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = previousAnonKey;
+  }
+});
+
+test("signup, login, and OAuth route failures report missing configuration consistently", () => {
+  const error = new SupabaseConfigurationError(["NEXT_PUBLIC_SUPABASE_URL"]);
+  for (const fallback of [
+    "The signup service is unavailable. Please try again later.",
+    "The login service is unavailable. Please try again later.",
+    "Google sign-in is unavailable.",
+  ]) {
+    assert.deepEqual(getAuthRouteFailure(error, fallback), {
+      message: AUTH_CONFIGURATION_ERROR_MESSAGE,
+      status: 503,
+    });
+  }
+  assert.deepEqual(getAuthRouteFailure(new Error("private details"), "safe fallback"), {
+    message: "safe fallback",
+    status: 503,
+  });
 });
 
 test("login and email validation use shared rules", () => {

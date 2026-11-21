@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { validatePassword } from "@/lib/validation/auth";
+import { getAuthRouteFailure } from "@/lib/auth/route-errors";
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +20,8 @@ export async function POST(request: Request) {
     const { error } = await supabase.auth.updateUser({ password });
     if (error) return NextResponse.json({ message: "This recovery link is invalid or expired." }, { status: 400 });
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ message: "Unable to reset your password." }, { status: 503 });
+  } catch (error) {
+    const failure = getAuthRouteFailure(error, "Unable to reset your password.");
+    return NextResponse.json({ message: failure.message }, { status: failure.status });
   }
 }

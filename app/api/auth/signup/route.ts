@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
 
-import { SupabaseConfigurationError, getSiteUrl } from "@/lib/supabase/config";
+import {
+  SupabaseConfigurationError,
+  getSiteUrl,
+  getSupabaseEnvironment,
+} from "@/lib/supabase/config";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  getAuthRouteFailure,
+  getSignupProviderErrorMessage,
+  getSupabaseAuthErrorDetails,
+} from "@/lib/auth/route-errors";
 import { normalizePhone, validateSignupInput } from "@/lib/validation/auth";
 
 export async function POST(request: Request) {
   try {
+    getSupabaseEnvironment();
     const input = (await request.json()) as Record<string, unknown>;
     const validation = validateSignupInput(input);
     if (Object.keys(validation.errors).length > 0) {
@@ -32,6 +42,7 @@ export async function POST(request: Request) {
     });
 
     if (error) {
+      const details = getSupabaseAuthErrorDetails(error);
       console.warn(
         "Supabase signup request was rejected.",
         JSON.stringify({
@@ -41,24 +52,19 @@ export async function POST(request: Request) {
           code: error.code,
         }),
       );
-      return NextResponse.json(
-        { message: "Unable to create your account. Check your details and try again." },
-        { status: 400 },
-      );
+      return NextResponse.json({ message: getSignupProviderErrorMessage(details.code) }, {
+        status: details.status ?? 400,
+      });
     }
 
     return NextResponse.json({ confirmed: Boolean(data.session) });
   } catch (error) {
     if (error instanceof SupabaseConfigurationError) {
-      return NextResponse.json(
-        { message: "Signup is not configured. Please contact the site administrator." },
-        { status: 503 },
-      );
+      const failure = getAuthRouteFailure(error, "The signup service is unavailable. Please try again later.");
+      return NextResponse.json({ message: failure.message }, { status: failure.status });
     }
 
-    return NextResponse.json(
-      { message: "The signup service is unavailable. Please try again later." },
-      { status: 503 },
-    );
+    const failure = getAuthRouteFailure(error, "The signup service is unavailable. Please try again later.");
+    return NextResponse.json({ message: failure.message }, { status: failure.status });
   }
 }

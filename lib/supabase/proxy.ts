@@ -4,16 +4,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseEnvironment } from "@/lib/supabase/config";
 
 export async function updateSession(request: NextRequest) {
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-  ) {
+  let environment: ReturnType<typeof getSupabaseEnvironment>;
+  try {
+    environment = getSupabaseEnvironment();
+  } catch {
     return NextResponse.next({ request });
   }
 
   let response = NextResponse.next({ request });
-  const { publishableKey, url } = getSupabaseEnvironment();
+  const { publishableKey, url } = environment;
   const supabase = createServerClient(url, publishableKey, {
     cookies: {
       getAll() {

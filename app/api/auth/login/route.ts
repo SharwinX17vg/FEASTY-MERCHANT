@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { getSupabaseEnvironment } from "@/lib/supabase/config";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getAuthRouteFailure } from "@/lib/auth/route-errors";
 import { validateLoginInput } from "@/lib/validation/auth";
 
 export async function POST(request: Request) {
   try {
+    getSupabaseEnvironment();
     const input = (await request.json()) as Record<string, unknown>;
     const validation = validateLoginInput(input);
     if (Object.keys(validation.errors).length > 0) {
@@ -21,10 +24,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json(
-      { message: "The login service is unavailable. Please try again later." },
-      { status: 503 },
-    );
+  } catch (error) {
+    const failure = getAuthRouteFailure(error, "The login service is unavailable. Please try again later.");
+    return NextResponse.json({ message: failure.message }, { status: failure.status });
   }
 }
